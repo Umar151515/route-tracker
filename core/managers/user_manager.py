@@ -1,8 +1,8 @@
 import sqlite3
 from typing import Any
 
-from ..config import user_data_path
-from utils.text.processing import validate_name, validate_phone, validate_role, ALLOWED_ROLES
+from ..config import data_path
+from utils.text.processing import validate_name, validate_phone, validate_role, validate_bus_number, ALLOWED_ROLES
 
 
 class UserManager:
@@ -20,17 +20,17 @@ class UserManager:
             self._initialized = True
 
     def create_table(self):
-        with sqlite3.connect(user_data_path) as connect:
+        with sqlite3.connect(data_path) as connect:
             cursor = connect.cursor()
             cursor.execute("PRAGMA foreign_keys = ON;")
 
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS users (
-                    phone_number TEXT UNIQUE,
+                    phone_number TEXT NOT NULL UNIQUE,
                     user_id INTEGER DEFAULT -1,
-                    role TEXT,
-                    name TEXT,
-                    bus_number INTEGER
+                    role TEXT NOT NULL,
+                    name VARCHAR(123) NOT NULL,
+                    bus_number VARCHAR(30) NOT NULL
             );""")
 
     def get_parameters(
@@ -44,7 +44,7 @@ class UserManager:
         name: bool = False,
         bus_number: bool = False
     ) -> dict[str, Any] | Any:
-        self.check_user_parameters(phone_number, user_id)
+        self.check_parameters(phone_number, user_id)
         
         fields = [field for field, include in {
             "phone_number": get_phone_number,
@@ -57,11 +57,12 @@ class UserManager:
         if not fields:
             raise ValueError("At least one field must be requested to retrieve user parameters.")
         
-        with sqlite3.connect(user_data_path) as connect:
+        with sqlite3.connect(data_path) as connect:
             search_key = self._get_search_key(phone_number, user_id)
+            search_field = "phone_number" if phone_number else "user_id"
 
             cursor = connect.cursor()
-            cursor.execute(f"SELECT {', '.join(fields)} FROM users WHERE {"phone_number" if phone_number else "user_id"} = ?", (search_key,))
+            cursor.execute(f"SELECT {', '.join(fields)} FROM users WHERE {search_field} = ?", (search_key,))
             row = cursor.fetchone()
 
         if not row:
@@ -76,10 +77,10 @@ class UserManager:
         phone_number: str,
         role: str,
         name: str,
-        bus_number: int,
+        bus_number: str,
         user_id: int | None = None
     ):
-        self.check_user_parameters(phone_number, user_id, role, name, bus_number)
+        self.check_parameters(phone_number, user_id, role, name, bus_number)
 
         fields_to_update = {
             "phone_number": phone_number,
@@ -91,7 +92,7 @@ class UserManager:
         if not fields:
             raise ValueError("At least one field must be provided to create the user.")
 
-        with sqlite3.connect(user_data_path) as connect:
+        with sqlite3.connect(data_path) as connect:
             cursor = connect.cursor()
             cursor.execute("PRAGMA foreign_keys = ON;")
             
@@ -118,10 +119,13 @@ class UserManager:
         new_user_id: int | None = None,
         role: str | None = None,
         name: str | None = None,
-        bus_number: int | None = None
+        bus_number: str | None = None
     ):
-        self.check_user_parameters(phone_number, user_id, role, name, bus_number)
-        self.check_user_parameters(new_phone_number, new_user_id)
+        self.check_parameters(phone_number, user_id, role, name, bus_number)
+        self.check_parameters(new_phone_number, new_user_id)
+
+        if new_phone_number:
+            new_user_id = -1
 
         fields_to_update = {
             "phone_number": new_phone_number,
@@ -134,42 +138,56 @@ class UserManager:
         if not fields:
             raise ValueError("At least one field must be provided to update the user.")
 
-        with sqlite3.connect(user_data_path) as connect:
+        with sqlite3.connect(data_path) as connect:
             search_key = self._get_search_key(phone_number, user_id)
+            search_field = "phone_number" if phone_number else "user_id"
 
             cursor = connect.cursor()
             cursor.execute("PRAGMA foreign_keys = ON;")
-            cursor.execute(f"UPDATE users SET {', '.join(f'{key} = ?' for key in fields.keys())} WHERE {"phone_number" if phone_number else "user_id"} = ?",
+            cursor.execute(f"UPDATE users SET {', '.join(f'{key} = ?' for key in fields.keys())} WHERE {search_field} = ?",
                            (*fields.values(), search_key))
             connect.commit()
 
-    def user_exists(self, phone_number: str | None = None, user_id: int | None = None) -> bool:
-        self.check_user_parameters(phone_number, user_id)
+    def delete_user(self, phone_number: str | None = None, user_id: int | None = None):
+        self.check_parameters(phone_number, user_id)
 
-        with sqlite3.connect(user_data_path) as connect:
+        with sqlite3.connect(data_path) as connect:
             search_key = self._get_search_key(phone_number, user_id)
+            search_field = "phone_number" if phone_number else "user_id"
+
+            cursor = connect.cursor()
+            cursor.execute("PRAGMA foreign_keys = ON;")
+            cursor.execute(f"DELETE FROM users WHERE {search_field} = ?", (search_key,))
+            connect.commit()
+
+    def user_exists(self, phone_number: str | None = None, user_id: int | None = None) -> bool:
+        self.check_parameters(phone_number, user_id)
+
+        with sqlite3.connect(data_path) as connect:
+            search_key = self._get_search_key(phone_number, user_id)
+            search_field = "phone_number" if phone_number else "user_id"
             
             cursor = connect.cursor()
-            cursor.execute(f"SELECT 1 FROM users WHERE {"phone_number" if phone_number else "user_id"} = ?", (search_key,))
+            cursor.execute(f"SELECT 1 FROM users WHERE {search_field} = ?", (search_key,))
             return cursor.fetchone() is not None
     
-    def check_user_parameters(
+    def check_parameters(
         self, 
         phone_number: str | None = None,
         user_id: int | None = None,
         role: str | None = None,
         name: str | None = None,
-        bus_number: int | None = None
+        bus_number: str | None = None
     ):
         if not phone_number is None and not validate_phone(phone_number):
-            raise ValueError("Invalid phone number format.")
-        elif not user_id is None and (not isinstance(user_id, int) or user_id < 0):
+            raise ValueError("Invalid phone number.")
+        elif not user_id is None and (not isinstance(user_id, int) or user_id <= 0):
             raise ValueError("Invalid user ID.")
         elif not role is None and not validate_role(role):
             raise ValueError(f"Invalid role, it should be {ALLOWED_ROLES}.")
         elif not name is None and not validate_name(name):
             raise ValueError(f"Invalid name.")
-        elif not bus_number is None and (not isinstance(bus_number, int) or bus_number < 0):
+        elif not bus_number is None and not validate_bus_number(bus_number):
             raise ValueError("Invalid bus number.")
         
     def _get_search_key(self, phone_number: str | None = None, user_id: int | None = None) -> str | int:
@@ -179,5 +197,3 @@ class UserManager:
                 raise ValueError("Neither phone_number nor user_id was passed for search.")
             search_key = user_id
         return search_key
-    
-    

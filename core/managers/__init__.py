@@ -1,3 +1,3 @@
 from .user_manager import UserManager
-from .messages_manager import MessagesManager
+from .bus_stops_manager import BusStopsManager
 from .config_manager import ConfigManager
