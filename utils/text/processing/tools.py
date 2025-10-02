@@ -1,18 +1,5 @@
 import re
 
-import nltk
-
-
-def shorten_text(text: str) -> str:
-    text = re.sub(r'[^\w\s]', '', text)
-    text = text.lower()
-    stop_words = set(nltk.corpus.stopwords.words('russian'))
-    word_tokens = nltk.word_tokenize(text)
-    filtered_text = [word for word in word_tokens if word not in stop_words]
-    lemmatizer = nltk.stem.WordNetLemmatizer()
-    lemmatized_text = [lemmatizer.lemmatize(word) for word in filtered_text]
-    new_text = ' '.join(lemmatized_text)
-    return re.sub(' +', ' ', new_text)
 
 def crop_text(text: str, percent_crop: float) -> str:
     text = text.split(' ')

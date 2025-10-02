@@ -4,7 +4,7 @@ from aiogram.types import Message
 from core.managers import UserManager
 from core.managers import MessagesManager
 from ..core.services import UserService
-from ..utils.messages import send_message
+from ..utils import send_message
 from ..utils.generate_response import response_generation
 
 

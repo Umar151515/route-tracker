@@ -1,9 +1,9 @@
 from aiogram import F, Router
 from aiogram.enums import ParseMode
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, ContentType, User
 
 from core.managers import UserManager
-from ..utils.messages import send_message, edit_message
+from ..utils import send_message, edit_message
 from ..keyboards import main_settings, get_main_keyboard, get_text_models_keyboard, get_image_models_keyboard
 
 
@@ -81,3 +81,10 @@ async def handle_image_model_selection(callback: CallbackQuery, user_manager: Us
 
     except Exception as e:
         await edit_message(callback.message, f"{e}\n❌ Произошла ошибка.", None)
+
+@router.message_handler(content_types=ContentType.CONTACT)
+async def get_contact(message: Message, user: User):
+    phone_number = message.contact.phone_number 
+
+    await message.answer(f"Охуеть, я поймал твой номер: `{phone_number}`. Спасибо, блять.")
+

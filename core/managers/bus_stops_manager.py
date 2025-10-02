@@ -1,4 +1,4 @@
-import sqlite3
+import aiosqlite
 from typing import Any
 
 from ..config import data_path
@@ -14,23 +14,22 @@ class BusStopsManager:
             cls._instance = super().__new__(cls)
         return cls._instance
     
-    def __init__(self):
+    async def __init__(self):
         if not self._initialized:
-            self.create_table()
+            await self.create_table()
             self._initialized = True
 
-    def create_table(self):
-        with sqlite3.connect(data_path) as connect:
-            cursor = connect.cursor()
-            cursor.execute("PRAGMA foreign_keys = ON;")
+    async def create_table(self):
+        async with aiosqlite.connect(data_path) as connect:
+            await connect.execute("PRAGMA foreign_keys = ON;")
 
-            cursor.execute("""
+            await connect.execute("""
                 CREATE TABLE IF NOT EXISTS buses (
                     bus_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     bus_number VARCHAR(30) NOT NULL UNIQUE
             );""")
 
-            cursor.execute("""
+            await connect.execute("""
                 CREATE TABLE IF NOT EXISTS stops (
                     stop_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     bus_id INTEGER NOT NULL,
@@ -39,46 +38,43 @@ class BusStopsManager:
                     FOREIGN KEY (bus_id) REFERENCES buses(bus_id) ON DELETE CASCADE ON UPDATE CASCADE
             );""")
 
-    def create_bus(self, bus_number: str):
+            await connect.commit()
+
+    async def create_bus(self, bus_number: str):
         self.check_parameters(bus_number=bus_number)
+        async with aiosqlite.connect(data_path) as connect:
+            await connect.execute("PRAGMA foreign_keys = ON;")
+            await connect.execute("INSERT INTO buses (bus_number) VALUES (?)", (bus_number,))
+            await connect.commit()
 
-        with sqlite3.connect(data_path) as connect:
-            cursor = connect.cursor()
-            cursor.execute("PRAGMA foreign_keys = ON;")
-            cursor.execute("INSERT INTO buses (bus_number) VALUES (?)", (bus_number,))
-            connect.commit()
+    async def delete_bus(self, bus_number: str | None = None, bus_id: int | None = None):
+        search_key = self._get_search_key(bus_number, bus_id)
+        search_field = "bus_number" if bus_number else "bus_id"
 
-    def delete_bus(self, bus_number: str | None = None, bus_id: int | None = None):
-        with sqlite3.connect(data_path) as connect:
-            search_key = self._get_search_key(bus_number, bus_id)
-            search_field = "bus_number" if bus_number else "bus_id"
+        async with aiosqlite.connect(data_path) as connect:
+            await connect.execute(f"DELETE FROM buses WHERE {search_field} = ?", (search_key,))
+            await connect.commit()
 
-            cursor = connect.cursor()
-            cursor.execute("DELETE FROM buses WHERE {0} = ?".format(search_field), (search_key,))
-            connect.commit()
-
-    def bus_exists(self, bus_number: str | None = None, bus_id: int | None = None) -> bool:
-        with sqlite3.connect(data_path) as connect:
-            search_key = self._get_search_key(bus_number, bus_id)
-            search_field = "bus_number" if bus_number else "bus_id"
+    async def bus_exists(self, bus_number: str | None = None, bus_id: int | None = None) -> bool:
+        search_key = self._get_search_key(bus_number, bus_id)
+        search_field = "bus_number" if bus_number else "bus_id"
             
-            cursor = connect.cursor()
-            cursor.execute(f"SELECT 1 FROM buses WHERE {search_field} = ?", (search_key,))
-            return cursor.fetchone() is not None
+        async with aiosqlite.connect(data_path) as connect:
+            async with connect.execute(f"SELECT 1 FROM buses WHERE {search_field} = ?", (search_key,)) as cursor:
+                return await cursor.fetchone() is not None
 
-    def get_bus_id(self, bus_number: str) -> int:
+    async def get_bus_id(self, bus_number: str) -> int:
         self.check_parameters(bus_number=bus_number)
-        return self._get_bus_field("bus_id", "bus_number", bus_number)
+        return await self._get_bus_field("bus_id", "bus_number", bus_number)
 
-    def get_bus_number(self, bus_id: int) -> str:
+    async def get_bus_number(self, bus_id: int) -> str:
         self.check_parameters(bus_id=bus_id)
-        return self._get_bus_field("bus_number", "bus_id", bus_id)
+        return await self._get_bus_field("bus_number", "bus_id", bus_id)
 
-    def add_stop(
+    async def create_stop(
         self,
         bus_number: str | None = None,
         bus_id: int | None = None,
-
         stop_name: str | None = None,
         stop_order: int | None = None
     ):
@@ -88,30 +84,28 @@ class BusStopsManager:
             raise ValueError("Stop name must be provided.")
 
         if bus_id is None:
-            bus_id = self.get_bus_id(bus_number)
+            bus_id = await self.get_bus_id(bus_number)
 
-        with sqlite3.connect(data_path) as connect:
-            cursor = connect.cursor()
-
-            cursor.execute("SELECT COUNT(*) FROM stops WHERE bus_id = ?", (bus_id,))
-            total_stops = cursor.fetchone()[0]
+        async with aiosqlite.connect(data_path) as connect:
+            async with connect.execute("SELECT COUNT(*) FROM stops WHERE bus_id = ?", (bus_id,)) as cursor:
+                total_stops = (await cursor.fetchone())[0]
 
             if stop_order is None or stop_order > total_stops:
                 stop_order = total_stops + 1
 
-            cursor.execute("""
+            await connect.execute("""
                 UPDATE stops SET stop_order = stop_order + 1
                 WHERE bus_id = ? AND stop_order >= ?
             """, (bus_id, stop_order))
 
-            cursor.execute("""
+            await connect.execute("""
                 INSERT INTO stops (bus_id, stop_name, stop_order)
                 VALUES (?, ?, ?)
             """, (bus_id, stop_name, stop_order))
 
-            connect.commit()
+            await connect.commit()
 
-    def delete_stop(
+    async def delete_stop(
         self,
         stop_id: int | None = None,
         bus_number: str | None = None,
@@ -124,54 +118,52 @@ class BusStopsManager:
             raise ValueError("Either stop_id or stop_order must be provided.")
 
         if bus_id is None:
-            bus_id = self.get_bus_id(bus_number)
+            bus_id = await self.get_bus_id(bus_number)
 
-        with sqlite3.connect(data_path) as connect:
-            cursor = connect.cursor()
-
+        async with aiosqlite.connect(data_path) as connect:
             if stop_id:
-                cursor.execute("SELECT stop_order FROM stops WHERE stop_id = ?", (stop_id,))
+                async with connect.execute("SELECT stop_order FROM stops WHERE stop_id = ?", (stop_id,)) as cursor:
+                    row = await cursor.fetchone()
             else:
-                cursor.execute("SELECT stop_order FROM stops WHERE bus_id = ? AND stop_order = ?", (bus_id, stop_order))
-            row = cursor.fetchone()
+                async with connect.execute("SELECT stop_order FROM stops WHERE bus_id = ? AND stop_order = ?", (bus_id, stop_order)) as cursor:
+                    row = await cursor.fetchone()
+
             if not row:
                 raise ValueError("Stop not found.")
 
             stop_order = row[0]
 
             if stop_id:
-                cursor.execute("DELETE FROM stops WHERE stop_id = ?", (stop_id,))
+                await connect.execute("DELETE FROM stops WHERE stop_id = ?", (stop_id,))
             else:
-                cursor.execute("DELETE FROM stops WHERE bus_id = ? AND stop_order = ?", (bus_id, stop_order))
+                await connect.execute("DELETE FROM stops WHERE bus_id = ? AND stop_order = ?", (bus_id, stop_order))
 
-            cursor.execute("""
+            await connect.execute("""
                 UPDATE stops SET stop_order = stop_order - 1
                 WHERE bus_id = ? AND stop_order > ?
             """, (bus_id, stop_order))
 
-            connect.commit()
+            await connect.commit()
 
-    def delete_all_stops(self, bus_number: str | None = None, bus_id: int | None = None):
+    async def delete_all_stops(self, bus_number: str | None = None, bus_id: int | None = None):
         self.check_parameters(bus_number, bus_id)
 
         if bus_id is None:
-            bus_id = self.get_bus_id(bus_number)
+            bus_id = await self.get_bus_id(bus_number)
 
-        with sqlite3.connect(data_path) as connect:
-            cursor = connect.cursor()
-            cursor.execute("DELETE FROM stops WHERE bus_id = ?", (bus_id,))
-            connect.commit()
+        async with aiosqlite.connect(data_path) as connect:
+            await connect.execute("DELETE FROM stops WHERE bus_id = ?", (bus_id,))
+            await connect.commit()
 
-    def get_stop(
+    async def get_stop(
         self,
         stop_id: int,
-
         get_stop_id: bool = False,
         get_bus_id: bool = False,
         get_stop_name: bool = False,
         get_stop_order: bool = False
-    ) -> dict[str, Any] | Any:
-        self.check_parameters(stop_id)
+    ) -> list[Any] | Any:
+        self.check_parameters(stop_id=stop_id)
 
         fields = [field for field, include in {
             "stop_id": get_stop_id,
@@ -183,32 +175,30 @@ class BusStopsManager:
         if not fields:
             raise ValueError("At least one field must be requested to retrieve stop parameters.")
 
-        with sqlite3.connect(data_path) as connect:
-            cursor = connect.cursor()
-            cursor.execute(f"SELECT {', '.join(fields)} FROM stops WHERE stop_id = ?", (stop_id,))
-            row = cursor.fetchone()
+        async with aiosqlite.connect(data_path) as connect:
+            async with connect.execute(f"SELECT {', '.join(fields)} FROM stops WHERE stop_id = ?", (stop_id,)) as cursor:
+                row = await cursor.fetchone()
 
         if not row:
             raise ValueError(f"Stop {stop_id} not found.")
 
         if len(row) > 1:
-            return dict(zip(fields, row))
+            return list(row)
         return row[0]
 
-    def get_stops(
+    async def get_stops(
         self,
         bus_number: str | None = None,
         bus_id: int | None = None,
-
         get_stop_id: bool = False,
         get_bus_id: bool = False,
         get_stop_name: bool = False,
         get_stop_order: bool = False
-    ) -> list[dict[str, Any]] | list[Any]:
+    ) -> list[tuple[Any]] | list[Any]:
         self.check_parameters(bus_number, bus_id)
         
         if bus_id is None:
-            bus_id = self.get_bus_id(bus_number)
+            bus_id = await self.get_bus_id(bus_number)
 
         fields = [field for field, include in {
             "stop_id": get_stop_id,
@@ -220,37 +210,34 @@ class BusStopsManager:
         if not fields:
             raise ValueError("At least one field must be requested to retrieve stop parameters.")
 
-        with sqlite3.connect(data_path) as connect:
-            cursor = connect.cursor()
-            cursor.execute(f"SELECT {', '.join(fields)} FROM stops WHERE bus_id = ? ORDER BY stop_order", (bus_id,))
-            rows = cursor.fetchall()
+        async with aiosqlite.connect(data_path) as connect:
+            async with connect.execute(f"SELECT {', '.join(fields)} FROM stops WHERE bus_id = ? ORDER BY stop_order", (bus_id,)) as cursor:
+                rows = await cursor.fetchall()
 
         if not rows:
             return []
 
         if len(fields) > 1:
-            return [dict(zip(fields, row)) for row in rows]
+            return rows
         return [row[0] for row in rows]
 
-    def _get_search_key(self, bus_number: str | None = None, bus_id: int | None = None) -> str | int:
-        self.check_parameters(bus_number, bus_id)
-
-        search_key = bus_number
-        if not bus_number:
-            if not bus_id:
-                raise ValueError("Neither bus_number nor bus_id was passed for search.")
-            search_key = bus_id
-        return search_key
-    
-    def _get_bus_field(self, return_field: str, search_field: str, search_value: Any) -> Any:
-        with sqlite3.connect(data_path) as connect:
-            cursor = connect.cursor()
-            cursor.execute(f"SELECT {return_field} FROM buses WHERE {search_field} = ?", (search_value,))
-            row = cursor.fetchone()
+    async def _get_bus_field(self, return_field: str, search_field: str, search_value: Any) -> Any:
+        async with aiosqlite.connect(data_path) as connect:
+            async with connect.execute(f"SELECT {return_field} FROM buses WHERE {search_field} = ?", (search_value,)) as cursor:
+                row = await cursor.fetchone()
 
         if not row:
             raise ValueError(f"Bus with {search_field}={search_value} not found.")
         return row[0]
+
+    def _get_search_key(self, bus_number: str | None = None, bus_id: int | None = None) -> str | int:
+        self.check_parameters(bus_number, bus_id)
+
+        if bus_number:
+            return bus_number
+        if bus_id:
+            return bus_id
+        raise ValueError("Neither bus_number nor bus_id was passed for search.")
 
     def check_parameters(
         self,

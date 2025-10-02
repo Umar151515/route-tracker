@@ -7,6 +7,7 @@ from aiogram.client.default import DefaultBotProperties
 from app.handlers import routers
 from app.core.services import UserService
 from core.managers import UserManager
+from core.managers import BusStopsManager
 from core.managers import ConfigManager
 
 
@@ -20,6 +21,7 @@ async def main():
 
     dp["user_service"] = UserService(bot)
     dp["user_manager"] = UserManager()
+    dp["bus_stops_manager"] = BusStopsManager()
 
     for router in routers:
         dp.include_router(router)

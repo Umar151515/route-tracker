@@ -1,7 +1,9 @@
 from aiogram.types import Message
 from aiogram.enums import ParseMode
+from aiogram import Bot
 
 from utils.text.processing import split_text
+from core.managers import ConfigManager
 
 
 async def send_message(
@@ -24,10 +26,32 @@ async def send_message(
             else:
                 await message.answer(part, parse_mode=parse_mode, **kwargs)
     except Exception as e:
+        ConfigManager.log.logger.error(f"{e}\n❌Произошла ошибка при отправке.\nID пользователя: {message.from_user.id}\nТекст: {text}")
         if reply:
             await message.reply(f"{e}\n❌Произошла ошибка при отправке", parse_mode=parse_mode, **kwargs)
         else:
             await message.answer(f"{e}\n❌Произошла ошибка при отправке", parse_mode=parse_mode, **kwargs)
+
+async def send_message_from_id(
+        bot: Bot,
+        user_id: int,
+        text: str,
+        parse_mode: ParseMode = ParseMode.MARKDOWN,
+        **kwargs
+    ):
+
+    try:
+        parts = split_text(text, 4096)
+        
+        if len(parts) > 1:
+            parse_mode = None
+
+        for part in parts:
+            await bot.send_message(user_id, part, parse_mode=parse_mode, **kwargs)
+    except Exception as e:
+        ConfigManager.log.logger.error(f"{e}\n❌Произошла ошибка при отправке по ID.\nID пользователя: {user_id}\nТекст: {text}")
+        await bot.send_message(user_id, f"{e}\n❌Произошла ошибка при отправке", parse_mode=parse_mode, **kwargs)
+
 
 async def edit_message(
         message: Message, 
@@ -56,6 +80,7 @@ async def edit_message(
                 await bot_message.answer(part, parse_mode=None)
 
     except Exception as e:
+        ConfigManager.log.logger.error(f"{e}\n❌Произошла ошибка при редактировании.\nID пользователя: {message.from_user.id}\nТекст: {text}")
         if len(parts) > 1:
             await message.answer(f"{e}\n❌Произошла ошибка при отправке", parse_mode=parse_mode, **kwargs)
         else:
