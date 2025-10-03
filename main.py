@@ -19,14 +19,13 @@ async def main():
  
     dp = Dispatcher()
 
-    dp["user_service"] = UserService(bot)
-    dp["user_manager"] = UserManager()
-    dp["bus_stops_manager"] = BusStopsManager()
-
+    dp["user_manager"] = await UserManager().create()
+    dp["bus_stops_manager"] = await BusStopsManager().create()
+    dp["user_service"] = UserService(bot, dp["user_manager"])
     for router in routers:
         dp.include_router(router)
 
-    print("bot started")
+    ConfigManager.log.logger.info("Bot launched")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

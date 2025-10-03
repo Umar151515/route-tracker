@@ -1,2 +1,2 @@
-from .main import driver_main_keyboard, phone_number_keyboard, get_stops_keyboard
-from .settings import main_settings, get_text_models_keyboard, get_image_models_keyboard
+from .base import driver_main_keyboard, get_stops_keyboard
+from .settings import phone_number_keyboard

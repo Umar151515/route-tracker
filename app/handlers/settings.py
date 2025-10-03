@@ -2,89 +2,59 @@ from aiogram import F, Router
 from aiogram.enums import ParseMode
 from aiogram.types import Message, CallbackQuery, ContentType, User
 
-from core.managers import UserManager
 from ..utils import send_message, edit_message
-from ..keyboards import main_settings, get_main_keyboard, get_text_models_keyboard, get_image_models_keyboard
+from core.managers import ConfigManager
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from core.managers import UserManager
 
 
 router = Router()
 
-@router.message(F.text == "⚙️ Настройки")
-async def settings(message: Message, user_manager: UserManager):
-    user = user_manager.get_user(message.from_user.id, True)
+@router.message(F.contact)
+async def get_contact(message: Message, user_manager: "UserManager"):
+    contact = message.contact
+    user_id = message.from_user.id
+    phone_number = contact.phone_number.replace(' ', "")
 
-    settings_info = (
-        "<b>⚙️ Настройки</b>\n\n"
-        "<b>Текущие параметры:</b>\n"
-        f"• Модель генерации текста: <code>{user.text_model}</code>\n"
-        f"• Модель генерации изображений: <code>{user.image_model}</code>\n"
-    )
-    await send_message(message, settings_info, parse_mode=ParseMode.HTML, reply_markup=main_settings)
+    if not contact.user_id or contact.user_id != user_id:
+        await send_message(
+            message,
+            "❌Вы можете отправить только свой контакт через кнопку в боте."
+        )
+        return
 
-@router.message(F.text == "🌐 Выключить поиск в интернете ✅")
-async def disable_web_search(message: Message, user_manager: UserManager):
     try:
-        user_manager.create_user(message.from_user.id)
-        user_manager.set_user(message.from_user.id, web_search=False)
-        
-        await send_message(message, "Поиск в интернете выключен", reply_markup=get_main_keyboard(False))
-    except Exception as e:
-        await send_message(message, f"{e}\n❌ Не удалось отключить поиск.", parse_mode=None)
+        get_user_id = await user_manager.get_parameters(
+            phone_number=phone_number,
+            get_user_id=True
+        )
 
-@router.message(F.text == "🌐 Включить поиск в интернете ❌")
-async def enable_web_search(message: Message, user_manager: UserManager):
-    try:
-        user_manager.create_user(message.from_user.id)
-        user_manager.set_user(message.from_user.id, web_search=True)
+        if get_user_id == user_id:
+            await send_message(message, "ℹ️Вы уже зарегистрированы.")
+            return
+        elif await user_manager.user_exists(phone_number=phone_number):
+            await user_manager.set_user(phone_number=phone_number, new_user_id=user_id)
+            await send_message(message, "✅Готово! Вы успешно зарегистрированы.")
+            return
 
-        await send_message(message, "Поиск в интернете включён", reply_markup=get_main_keyboard(True))
-    except Exception as e:
-        await send_message(message, f"{e}\n❌ Не удалось включить поиск.", parse_mode=None)
-
-@router.callback_query(F.data == "text_models")
-async def text_model(callback: CallbackQuery, user_manager: UserManager):
-    try:
-        user = user_manager.get_user(callback.from_user.id, True)
-        await edit_message(callback.message, "Выберите текстовую модель", reply_markup=get_text_models_keyboard(user))
-    except Exception as e:
-        await edit_message(callback.message, f"{e}\n❌ Произошла ошибка.", None)
-
-@router.callback_query(F.data == "image_models")
-async def image_model(callback: CallbackQuery, user_manager: UserManager):
-    try:
-        user = user_manager.get_user(callback.from_user.id, True)
-        await edit_message(callback.message, "Выберите модель для генерации изображений", 
-                           reply_markup=get_image_models_keyboard(user))
-    except Exception as e:
-        await edit_message(callback.message, f"{e}\n❌ Произошла ошибка.", None)
-    
-@router.callback_query(F.data.startswith("select_text_model_"))
-async def handle_text_model_selection(callback: CallbackQuery, user_manager: UserManager):
-    try:
-        selected_model = callback.data.replace("select_text_model_", "")
-        await edit_message(callback.message, f"Выбрана модель: {selected_model}")
-
-        user_manager.create_user(callback.from_user.id)
-        user_manager.set_user(callback.from_user.id, text_model=selected_model)
+        await send_message(
+            message,
+            "❌Ваши данные не найдены в базе. "
+            "Пожалуйста, свяжитесь с администратором."
+        )
+        ConfigManager.log.logger.info(
+            f"Пользователь с телефоном {phone_number} не найден. "
+            f"Попытка входа user_id={user_id}."
+        )
 
     except Exception as e:
-        await edit_message(callback.message, f"{e}\n❌ Произошла ошибка.", None)
-    
-@router.callback_query(F.data.startswith("select_image_model_"))
-async def handle_image_model_selection(callback: CallbackQuery, user_manager: UserManager):
-    try:
-        selected_model = callback.data.replace("select_image_model_", "")
-        await edit_message(callback.message, f"Выбрана модель: {selected_model}")
-
-        user_manager.create_user(callback.from_user.id)
-        user_manager.set_user(callback.from_user.id, image_model=selected_model)
-
-    except Exception as e:
-        await edit_message(callback.message, f"{e}\n❌ Произошла ошибка.", None)
-
-@router.message_handler(content_types=ContentType.CONTACT)
-async def get_contact(message: Message, user: User):
-    phone_number = message.contact.phone_number 
-
-    await message.answer(f"Охуеть, я поймал твой номер: `{phone_number}`. Спасибо, блять.")
-
+        await send_message(
+            message,
+            text=f"{e}\n❌Произошла ошибка при проверке регистрации.",
+            parse_mode=None
+        )
+        ConfigManager.log.logger.error(
+            f"{e}\nОшибка при проверке регистрации. Номер: {phone_number}, user_id={user_id}"
+        )

@@ -14,10 +14,14 @@ class UserManager:
             cls._instance = super().__new__(cls)
         return cls._instance
     
-    async def __init__(self):
-        if not self._initialized:
-            await self.create_table()
-            self._initialized = True
+    @classmethod
+    async def create(cls):
+        if not cls._initialized:
+            cls._instance = cls()
+            await cls._instance.create_table()
+            cls._initialized = True
+        
+        return cls._instance
 
     async def create_table(self):
         async with aiosqlite.connect(data_path) as connect:
@@ -66,7 +70,7 @@ class UserManager:
                 row = await cursor.fetchone()
 
         if not row:
-            raise ValueError(f"User {search_key} not found.")
+            return None
 
         if len(row) > 1:
             return list(row)

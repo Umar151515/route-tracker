@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 class UserService:
-    def __init__(self, bot: Bot, user_manager: UserManager):
+    def __init__(self, bot: Bot, user_manager: "UserManager"):
         self.bot = bot
         self.user_manager = user_manager
     

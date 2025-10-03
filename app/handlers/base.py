@@ -13,7 +13,7 @@ from ..utils import send_message
 router = Router()
 
 @router.message(F.text)
-async def register_passengers(message: Message, user: User, user_service: UserService):
-    if not user_service.check_user_role(user.id, "driver"):
+async def register_passengers(message: Message, user_service: UserService):
+    if not await user_service.check_user_role(message.from_user.id, "driver"):
         return
     

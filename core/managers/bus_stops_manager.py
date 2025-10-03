@@ -13,11 +13,15 @@ class BusStopsManager:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
-    
-    async def __init__(self):
-        if not self._initialized:
-            await self.create_table()
-            self._initialized = True
+
+    @classmethod
+    async def create(cls):
+        if not cls._initialized:
+            cls._instance = cls()
+            await cls._instance.create_table()
+            cls._initialized = True
+        
+        return cls._instance
 
     async def create_table(self):
         async with aiosqlite.connect(data_path) as connect:
@@ -63,11 +67,11 @@ class BusStopsManager:
             async with connect.execute(f"SELECT 1 FROM buses WHERE {search_field} = ?", (search_key,)) as cursor:
                 return await cursor.fetchone() is not None
 
-    async def get_bus_id(self, bus_number: str) -> int:
+    async def get_bus_id(self, bus_number: str) -> int | None:
         self.check_parameters(bus_number=bus_number)
         return await self._get_bus_field("bus_id", "bus_number", bus_number)
 
-    async def get_bus_number(self, bus_id: int) -> str:
+    async def get_bus_number(self, bus_id: int) -> str | None:
         self.check_parameters(bus_id=bus_id)
         return await self._get_bus_field("bus_number", "bus_id", bus_id)
 
@@ -180,7 +184,7 @@ class BusStopsManager:
                 row = await cursor.fetchone()
 
         if not row:
-            raise ValueError(f"Stop {stop_id} not found.")
+            return None
 
         if len(row) > 1:
             return list(row)
