@@ -9,18 +9,19 @@ if TYPE_CHECKING:
 
 driver_main_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="/delete_entry")]
+        [KeyboardButton(text="🗑️ Удалить последнюю запись")],
+        [KeyboardButton(text="👤 Мои данные")]
     ],
     resize_keyboard=True
 )
 
-async def get_stops_keyboard(bus_stops_manager: "BusStopsManager", bus_number: str, number_of_passengers: int) -> InlineKeyboardMarkup:
+async def get_stops_keyboard(bus_stops_manager: "BusStopsManager", bus_number: str, passenger_count: int) -> InlineKeyboardMarkup:
     
     stops = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
                 text=stop_name, 
-                callback_data=f"register_passengers_{stop_id}_{number_of_passengers}"
+                callback_data=f"register_passengers_{stop_id}_{passenger_count}"
             )
         ] for stop_id, stop_name in await bus_stops_manager.get_stops(bus_number, get_stop_id=True, get_stop_name=True)
     ])

@@ -8,7 +8,9 @@ from .paths import env_path
 class EnvManager:
     _instance: "EnvManager" = None
     _default_env = """# Please fill in these values
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here"""
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+GOOGLE_SHEET_NAME=Лист1
+GOOGLE_SHEET_ID=your_google_sheet_id_here"""
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:

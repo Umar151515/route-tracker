@@ -22,7 +22,7 @@ class UserService:
             await send_message_from_id(
                 self.bot,
                 user_id,
-                text=f"{e}\n❌ Произошла ошибка при проверке регистрации.",
+                text=f"❌ Произошла ошибка при проверке регистрации.",
                 parse_mode=None
             )
             ConfigManager.log.logger.error(f"{e}\n❌ Произошла ошибка при проверке регистрации. ID пользователя: {user_id}")
@@ -47,7 +47,7 @@ class UserService:
             await send_message_from_id(
                 self.bot,
                 user_id,
-                text=f"{e}\n❌ Произошла ошибка при проверке роли.",
+                text=f"❌ Произошла ошибка при проверке роли.",
                 parse_mode=None
             )
             ConfigManager.log.logger.error(f"{e}\n❌ Произошла ошибка при проверке роли.\nID пользователя: {user_id}\nРоль: {desired_role}")

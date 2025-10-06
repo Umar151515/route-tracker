@@ -9,6 +9,7 @@ from app.core.services import UserService
 from core.managers import UserManager
 from core.managers import BusStopsManager
 from core.managers import ConfigManager
+from core.managers import GoogleSheetsManager
 
 
 async def main():
@@ -22,6 +23,7 @@ async def main():
     dp["user_manager"] = await UserManager().create()
     dp["bus_stops_manager"] = await BusStopsManager().create()
     dp["user_service"] = UserService(bot, dp["user_manager"])
+    dp["sheets_manager"] = GoogleSheetsManager()
     for router in routers:
         dp.include_router(router)
 

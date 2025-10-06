@@ -26,11 +26,11 @@ async def send_message(
             else:
                 await message.answer(part, parse_mode=parse_mode, **kwargs)
     except Exception as e:
-        ConfigManager.log.logger.error(f"{e}\n❌Произошла ошибка при отправке.\nID пользователя: {message.from_user.id}\nТекст: {text}")
+        ConfigManager.log.logger.error(f"{e}\n❌ Произошла ошибка при отправке.\nID пользователя: {message.from_user.id}\nТекст: {text}")
         if reply:
-            await message.reply(f"{e}\n❌Произошла ошибка при отправке", parse_mode=parse_mode, **kwargs)
+            await message.reply(f"❌ Произошла ошибка при отправке", parse_mode=None)
         else:
-            await message.answer(f"{e}\n❌Произошла ошибка при отправке", parse_mode=parse_mode, **kwargs)
+            await message.answer(f"❌ Произошла ошибка при отправке", parse_mode=None)
 
 async def send_message_from_id(
         bot: Bot,
@@ -49,8 +49,8 @@ async def send_message_from_id(
         for part in parts:
             await bot.send_message(user_id, part, parse_mode=parse_mode, **kwargs)
     except Exception as e:
-        ConfigManager.log.logger.error(f"{e}\n❌Произошла ошибка при отправке по ID.\nID пользователя: {user_id}\nТекст: {text}")
-        await bot.send_message(user_id, f"{e}\n❌Произошла ошибка при отправке", parse_mode=parse_mode, **kwargs)
+        ConfigManager.log.logger.error(f"{e}\n❌ Произошла ошибка при отправке по ID.\nID пользователя: {user_id}\nТекст: {text}")
+        await bot.send_message(user_id, f"❌ Произошла ошибка при отправке", parse_mode=None)
 
 
 async def edit_message(
@@ -80,11 +80,11 @@ async def edit_message(
                 await bot_message.answer(part, parse_mode=None)
 
     except Exception as e:
-        ConfigManager.log.logger.error(f"{e}\n❌Произошла ошибка при редактировании.\nID пользователя: {message.from_user.id}\nТекст: {text}")
+        ConfigManager.log.logger.error(f"{e}\n❌ Произошла ошибка при редактировании.\nID пользователя: {message.from_user.id}\nТекст: {text}")
         if len(parts) > 1:
-            await message.answer(f"{e}\n❌Произошла ошибка при отправке", parse_mode=parse_mode, **kwargs)
+            await message.answer(f"❌ Произошла ошибка при отправке", parse_mode=None)
         else:
-            await message.answer(f"{e}\n❌Произошла ошибка при редактировании", parse_mode=parse_mode, **kwargs)
+            await message.answer(f"❌ Произошла ошибка при редактировании", parse_mode=None)
 
 async def delete_message(message: Message):
     try:
