@@ -1,20 +1,15 @@
 from aiogram import F, Router
-from aiogram.enums import ParseMode
+from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery, ContentType, User
 
 from core.managers import ConfigManager
+from core.managers import UserManager
 from ..utils import send_message, edit_message
-from ..keyboards import driver_main_keyboard
-
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from core.managers import UserManager
-
 
 router = Router()
 
 @router.message(F.contact)
-async def get_contact(message: Message, user_manager: "UserManager"):
+async def get_contact(message: Message, user_manager: UserManager):
     contact = message.contact
     user_id = message.from_user.id
     phone_number = contact.phone_number.replace(' ', "").replace('+', "")
@@ -33,11 +28,11 @@ async def get_contact(message: Message, user_manager: "UserManager"):
         )
 
         if get_user_id == user_id:
-            await send_message(message, "ℹ️Вы уже зарегистрированы.", reply_markup=driver_main_keyboard)
+            await send_message(message, "ℹ️ Вы уже зарегистрированы. Используйте команду /menu чтобы получить клавиатуру")
             return
         elif await user_manager.user_exists(phone_number=phone_number):
             await user_manager.set_user(phone_number=phone_number, new_user_id=user_id)
-            await send_message(message, "✅Готово! Вы успешно зарегистрированы.", reply_markup=driver_main_keyboard)
+            await send_message(message, "✅ Готово! Вы успешно зарегистрированы. Используйте команду /menu чтобы получить клавиатуру")
             return
 
         await send_message(
@@ -59,3 +54,5 @@ async def get_contact(message: Message, user_manager: "UserManager"):
         ConfigManager.log.logger.error(
             f"{e}\nОшибка при проверке регистрации. Номер: {phone_number}, user_id={user_id}"
         )
+
+

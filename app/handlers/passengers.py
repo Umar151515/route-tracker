@@ -1,27 +1,22 @@
 from aiogram import F, Router
 from aiogram.types import Message, CallbackQuery
+from aiogram.filters import Command
 
 from core.managers import UserManager
 from core.managers import BusStopsManager
 from core.managers import ConfigManager
 from core.managers import GoogleSheetsManager
-from ..core.services import UserService
 from ..utils import send_message, edit_message
 from ..keyboards import get_stops_keyboard
+from ..filters import driver_filter
 
 
 router = Router()
 
-@router.message(F.text == "🗑️ Удалить последнюю запись")
-async def delete_last_entry(
-    message: Message,
-    user_service: UserService, 
-    sheets_manager: GoogleSheetsManager
-):
+@router.message(Command("delete_last_entry"), driver_filter())
+@router.message(F.text == "🗑️ Удалить последнюю запись", driver_filter())
+async def delete_last_entry(message: Message, sheets_manager: GoogleSheetsManager):
     user_id = message.from_user.id
-
-    if not await user_service.check_user_role(user_id, "driver"):
-        return
     
     if not await sheets_manager.was_last_registration_today(user_id):
         await send_message(message, f"❗ Дальше вы уже не можете удалять записи", None)
@@ -38,17 +33,13 @@ async def delete_last_entry(
     
     await send_message(message, "Запись успешно удалена.")
 
-@router.message(F.text)
+@router.message(lambda message: message.text.isdigit(), driver_filter())
 async def register_passengers(
     message: Message, 
     user_manager: UserManager,
-    bus_stops_manager: BusStopsManager, 
-    user_service: UserService
+    bus_stops_manager: BusStopsManager,
 ):
     user_id = message.from_user.id
-    
-    if not await user_service.check_user_role(user_id, "driver"):
-        return
     
     try:
         passenger_count = int(message.text)
@@ -82,17 +73,13 @@ async def register_passengers(
         )
     )
 
-@router.callback_query(F.data.startswith("register_passengers_"))
+@router.callback_query(F.data.startswith("register_passengers_"), driver_filter())
 async def handle_register_passengers(
     callback: CallbackQuery, 
     user_manager: UserManager,
-    user_service: UserService, 
     bus_stops_manager: BusStopsManager, 
     sheets_manager: GoogleSheetsManager
 ):
-    if not await user_service.check_user_role(callback.from_user.id, "driver"):
-        return
-    
     try:
         user_id = callback.from_user.id
         stop_id, passenger_count = map(int, callback.data.replace("register_passengers_", "").split("_"))

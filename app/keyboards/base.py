@@ -1,10 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 
 from core.managers import ConfigManager
-
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from core.managers import BusStopsManager
+from core.managers import BusStopsManager
 
 
 driver_main_keyboard = ReplyKeyboardMarkup(
@@ -15,7 +12,16 @@ driver_main_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-async def get_stops_keyboard(bus_stops_manager: "BusStopsManager", bus_number: str, passenger_count: int) -> InlineKeyboardMarkup:
+admin_main_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="👤 Настройки пользователей")],
+        [KeyboardButton(text="🚌 Настройки автобусов")],
+        [KeyboardButton(text="📄 Настройки гугл таблицы")]
+    ],
+    resize_keyboard=True
+)
+
+async def get_stops_keyboard(bus_stops_manager: BusStopsManager, bus_number: str, passenger_count: int) -> InlineKeyboardMarkup:
     
     stops = InlineKeyboardMarkup(inline_keyboard=[
         [
