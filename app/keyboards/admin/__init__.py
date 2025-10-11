@@ -8,3 +8,4 @@ from .user import (
 )
 from .bus import bus_settings_keyboard
 from .google_sheet import sheets_settings_keyboard, confirm_delete_keyboard
+from .log import logs_settings_keyboard

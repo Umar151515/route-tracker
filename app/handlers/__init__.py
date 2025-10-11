@@ -4,13 +4,15 @@ from .passengers import router as passengers_router
 from .admin.user import routers as admin_user_routers
 from .admin.bus import routers as admin_bus_routers
 from .admin.google_sheet import routers as admin_google_sheet_routers
+from .admin.log import router as log_touter
 
 
 routers = [
     base_router,
     settings_router,
     passengers_router,
-    *admin_bus_routers
+    log_touter,
+    *admin_bus_routers,
     *admin_google_sheet_routers,
-    *admin_user_routers,
+    *admin_user_routers
 ]
