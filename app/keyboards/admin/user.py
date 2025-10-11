@@ -12,19 +12,13 @@ user_settings_keyboard = InlineKeyboardMarkup(inline_keyboard=[
 user_filters_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="👨‍💻 Показать всех", callback_data="user:get_all:all")],
     [InlineKeyboardButton(text="🎭 Отфильтровать по роли", callback_data="user:get_all:by_role_menu")],
-    [InlineKeyboardButton(text="🚌 Отфильтровать по автобусу", callback_data="user:get_all:by_bus")],
-    [InlineKeyboardButton(text="⬅️ Назад", callback_data="user:settings")]
+    [InlineKeyboardButton(text="🚌 Отфильтровать по автобусу", callback_data="user:get_all:by_bus")]
 ])
 
 user_roles_filter_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="🚛 Водители", callback_data="user:get_all:by_role:driver")],
     [InlineKeyboardButton(text="👑 Администраторы", callback_data="user:get_all:by_role:admin")],
     [InlineKeyboardButton(text="⬅️ Назад", callback_data="user:get_all")]
-])
-
-user_edit_start_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="Начать редактирование", callback_data="user:edit:start")],
-    [InlineKeyboardButton(text="⬅️ Назад", callback_data="user:settings")]
 ])
 
 user_add_role_keyboard = InlineKeyboardMarkup(inline_keyboard=[

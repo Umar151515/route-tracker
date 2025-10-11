@@ -44,34 +44,67 @@ async def register_passengers(
     try:
         passenger_count = int(message.text)
     except ValueError:
-        await send_message(message, "Пожалуйста, отправьте ТОЛЬКО КОЛИЧЕСТВО вошедших пассажиров числом.", True)
+        await send_message(message, "❌ Пожалуйста, введите только число пассажиров.", True)
         return
 
     if passenger_count < 0 or passenger_count > 200:
-        await send_message(message, "Введите реальное число вошедших пассажиров. Значение должно быть в пределах от 0 до 200.", True)
+        await send_message(message, "❌ Количество пассажиров должно быть от 0 до 200.", True)
         return
     
-    bus_number = await user_manager.get_parameters(user_id=user_id, get_bus_number=True)
+    try:
+        bus_number = await user_manager.get_parameters(user_id=user_id, get_bus_number=True)
+        
+        if not bus_number:
+            await send_message(
+                message,
+                "❌ У вас не назначен автобус. Обратитесь к администратору.",
+                reply=True
+            )
+            ConfigManager.log.logger.warning(f"⚠️ У пользователя ID {user_id} не назначен автобус")
+            return
+        
+        if not await bus_stops_manager.bus_exists(bus_number=bus_number):
+            await send_message(
+                message,
+                f"❌ Автобус '{bus_number}' не существует в системе. Обратитесь к администратору.",
+                reply=True
+            )
+            ConfigManager.log.logger.error(f"⚠️ Автобус '{bus_number}' пользователя ID {user_id} не существует в системе")
+            return
 
-    if not await bus_stops_manager.get_stops(bus_number=bus_number, get_stop_id=True):
+        stops = await bus_stops_manager.get_stops(bus_number=bus_number, get_stop_id=True)
+        if not stops:
+            await send_message(
+                message,
+                f"❌ Для автобуса '{bus_number}' не назначены остановки. Обратитесь к администратору.",
+                reply=True
+            )
+            ConfigManager.log.logger.error(f"⚠️ У автобуса '{bus_number}' пользователя ID {user_id} нет остановок")
+            return
+
+    except Exception as e:
+        ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при получении данных пользователя ID {user_id}")
         await send_message(
             message,
-            f"❌ Кажется, для вашего автобуса ({bus_number}) не закреплены остановки. Это техническая ошибка. обратитесь к Администратору, чтобы он закрепил маршрут. Пока маршрут не закреплен, регистрация невозможна!",
+            "❌ Произошла ошибка при проверке данных. Обратитесь к администратору.",
             reply=True
         )
-        ConfigManager.log.logger.critical(f"⚠️ У пользователя ID {user_id} нет закрепленных остановок. Регистрация пассажиров невозможна")
         return
 
-    await send_message(
-        message,
-        "Выберите остановку",
-        reply=True,
-        reply_markup=await get_stops_keyboard(
-            bus_stops_manager,
-            bus_number,
-            passenger_count
+    try:
+        await send_message(
+            message,
+            "🛑 Выберите остановку:",
+            reply=True,
+            reply_markup=await get_stops_keyboard(
+                bus_stops_manager,
+                bus_number,
+                passenger_count
+            )
         )
-    )
+    except Exception as e:
+        ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при создании клавиатуры остановок для пользователя ID {user_id}")
+        await send_message(message, "❌ Произошла ошибка при загрузке остановок.", reply=True)
 
 @router.callback_query(F.data.startswith("register_passengers_"), driver_filter())
 async def handle_register_passengers(

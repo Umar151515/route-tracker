@@ -3,11 +3,11 @@ from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 
 from core.managers import UserManager, ConfigManager
-from utils.text.processing import validate_phone, normalize_identifier, translate_role
+from utils.text.processing import validate_phone, normalize_identifier, format_user_record
 from ....utils import send_message
 from ....keyboards.admin import get_user_edit_fields_keyboard
+from ....states.admin import AdminUserEditStates
 from ....filters import admin_filter
-from ....states import AdminUserEditStates
 
 
 router = Router()
@@ -33,16 +33,10 @@ async def auto_user_lookup(message: Message, user_manager: UserManager, state: F
 
         role, name, bus_number = user
 
-        bus_info = f"**Автобус:** {bus_number}\n" if role == "driver" else ""
-
         await send_message(
             message, 
             f"**👤 Пользователь найден:**\n\n"
-            f"**Имя:** {name}\n"
-            f"**Роль:** {translate_role(role)}\n"
-            f"**Телефон:** `+{phone_number}`\n"
-            f"**User ID:** `{user_id}`\n"
-            f"{bus_info}"
+            f"{format_user_record(name, role, phone_number, user_id, bus_number)}"
             "\nВыберите действие:",
             reply_markup=get_user_edit_fields_keyboard(role)
         )

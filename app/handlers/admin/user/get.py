@@ -8,8 +8,7 @@ from utils.text.processing import (
     validate_bus_number, 
     parse_comma_list, 
     format_user_record, 
-    normalize_identifier,
-    translate_role
+    normalize_identifier
 )
 from ....utils import send_message, edit_message
 from ....keyboards.admin import (
@@ -17,8 +16,8 @@ from ....keyboards.admin import (
     user_filters_keyboard,
     user_roles_filter_keyboard,
 )
+from ....states.admin import AdminUserStates
 from ....filters import admin_filter
-from ....states import AdminUserStates
 
 
 router = Router()
@@ -47,7 +46,13 @@ async def cb_get_all_all(query: CallbackQuery, user_manager: UserManager):
             await edit_message(query.message, "🤷‍♂️ В базе данных пока нет ни одного пользователя.")
             return
 
-        text = f"✅ **Найдено пользователей: {len(users)}**\n\n" + "\n".join(format_user_record(u) for u in users)
+        user_lines = [
+            format_user_record(u["name"], u["role"], u["phone_number"], u["user_id"], u["bus_number"]) 
+            for u in users
+        ]
+        users_text = "\n".join(user_lines)
+        text = f"✅ **Найдено пользователей: {len(users)}**\n\n{users_text}"
+
         await edit_message(query.message, text)
 
     except Exception as e:
@@ -74,7 +79,13 @@ async def cb_get_all_by_role_selected(query: CallbackQuery, user_manager: UserMa
             await edit_message(query.message, f"🤷‍♂️ Пользователи с ролью «{role_name_ru}» не найдены.")
             return
 
-        text = f"👥 **{role_name_ru} ({len(users)} чел.)**\n\n" + "\n".join(format_user_record(u) for u in users)
+        user_lines = [
+            format_user_record(u["name"], u["role"], u["phone_number"], u["user_id"], u["bus_number"]) 
+            for u in users
+        ]
+        users_text = "\n".join(user_lines)
+        text = f"👥 **{role_name_ru} ({len(users)} чел.)**\n\n{users_text}"
+        
         await edit_message(query.message, text)
 
     except Exception as e:
@@ -120,7 +131,13 @@ async def handle_bus_filter_input(message: Message, state: FSMContext, user_mana
             await send_message(message, "🤷‍♂️ Водители для указанных автобусов не найдены.")
             return
         
-        text = f"✅ **Найдено водителей: {len(users)}**\n\n" + "\n".join(format_user_record(u) for u in users)
+        user_lines = [
+            format_user_record(u["name"], u["role"], u["phone_number"], u["user_id"], u["bus_number"]) 
+            for u in users
+        ]
+        users_text = "\n".join(user_lines)
+        text = f"✅ **Найдено водителей: {len(users)}**\n\n{users_text}"
+        
         await send_message(message, text)
 
     except Exception as e:
@@ -161,16 +178,10 @@ async def handle_get_user_info(message: Message, state: FSMContext, user_manager
 
         phone_number, user_id, role, name, bus_number = result
 
-        bus_info = f"**Автобус:** {bus_number}" if role == "driver" else ""
-
         await send_message(
             message, 
             f"**ℹ️ Информация о пользователе:**\n\n"
-            f"**Имя:** {name}\n"
-            f"**Роль:** {translate_role(role)}\n"
-            f"**Телефон:** `+{phone_number}`\n"
-            f"**User ID:** `{user_id}`\n"
-            f"{bus_info}"
+            f"{format_user_record(name, role, phone_number, user_id, bus_number)}"
         )
 
     except Exception as e:

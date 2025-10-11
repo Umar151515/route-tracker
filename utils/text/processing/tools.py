@@ -17,15 +17,20 @@ def split_text(text: str, max_length: int) -> list[str]:
 def parse_comma_list(text: str) -> list[str]:
     return [part.strip() for part in text.split(",") if part.strip()]
 
-def format_user_record(user: dict) -> str:
-    bus_info = f"**Автобус:** {user.get('bus_number')}\n" if user.get('role') == "driver" else ""
+def format_user_record(
+        name: str, 
+        role: str, 
+        phone_number: str, 
+        user_id: int, 
+        bus_number: str | None = None
+    ) -> str:
+    bus_info = f"**Автобус:** {bus_number}\n" if role == "driver" and bus_number else ""
     return (
-        f"**Имя:** {user.get('name')}\n"
-        f"**Роль:** {translate_role(user.get('role'))}\n"
-        f"**Телефон:** `+{user.get('phone_number')}`\n"
-        f"**User ID:** `{user.get('user_id')}`\n"
+        f"**Имя:** {name}\n"
+        f"**Роль:** {translate_role(role)}\n"
+        f"**Телефон:** `+{phone_number}`\n"
+        f"**User ID:** {f"`{user_id}`" if not user_id is None else "Еще не зарегистрирован"}\n"
         f"{bus_info}"
-        "————————————————"
     )
 
 def normalize_identifier(identifier: str) -> str:

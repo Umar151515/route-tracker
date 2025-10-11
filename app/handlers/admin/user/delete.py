@@ -7,8 +7,8 @@ from utils.text.processing import translate_role
 from utils.text.processing import validate_phone, normalize_identifier
 from ....utils import send_message, edit_message
 from ....keyboards.admin import user_delete_confirm_keyboard
+from ....states.admin import AdminUserDeleteStates
 from ....filters import admin_filter
-from ....states import AdminUserDeleteStates
 
 
 router = Router()

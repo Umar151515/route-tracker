@@ -11,20 +11,15 @@ from utils.text.processing import (
 )
 from ....utils import send_message, edit_message
 from ....keyboards.admin import (
-    user_edit_start_keyboard,
     get_user_edit_fields_keyboard,
 )
+from ....states.admin import AdminUserEditStates
 from ....filters import admin_filter
-from ....states import AdminUserEditStates
 
 
 router = Router()
 
 @router.callback_query(F.data == "user:edit", admin_filter())
-async def cb_edit_user_start(query: CallbackQuery):
-    await edit_message(query.message, "✏️ **Редактирование пользователя**", reply_markup=user_edit_start_keyboard)
-
-@router.callback_query(F.data == "user:edit:start", admin_filter())
 async def cb_edit_user_ask_identifier(query: CallbackQuery, state: FSMContext):
     await state.set_state(AdminUserEditStates.waiting_for_identifier)
     await edit_message(
