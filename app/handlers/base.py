@@ -1,12 +1,12 @@
 from aiogram import F, Router
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, ErrorEvent
+from aiogram.fsm.context import FSMContext
 
 from core.managers import UserManager
 from core.managers import BusStopsManager
 from core.managers import ConfigManager
-from core.managers import GoogleSheetsManager
 from ..utils import send_message, edit_message
 from ..keyboards import driver_main_keyboard, admin_main_keyboard
 from ..filters import ExistsFilter
@@ -24,17 +24,26 @@ async def cmd_start(message: Message, user_manager: UserManager):
         await send_message(message, f"❌ Произошла ошибка при получении данных.", None)
         ConfigManager.log.logger.error(f"{e}\n❌ Произошла ошибка при получении данных в user_information у пользователя ID {user_id}.")
         return
-
     if role == "driver":
         await send_message(
             message, 
-            (
-                f"Добро пожаловать {name}!\n\n"
-                "Вот что вы можете сделать:\n"
-                "Чтобы удалить последнюю запись, используйте команду: /delete_last_entry\n"
-                "Чтобы добавить новую запись, введите число от 0 до 200 и выберите остановку\n"
-                "Чтобы посмотреть свои данные, используйте команду: /my_details\n"
-            )
+            f"Добро пожаловать {name}!\n\n"
+            "Вот что вы можете сделать:\n"
+            "Чтобы удалить последнюю запись, используйте команду: /delete_last_entry\n"
+            "Чтобы добавить новую запись, введите число от 0 до 200 и выберите остановку\n"
+            "Чтобы посмотреть свои данные, используйте команду: /my_details\n"
+            "Открыть главное меню: /menu\n",
+            parse_mode=None
+        )
+    elif role == "admin":
+        await send_message(
+            message,
+            f"Добро пожаловать {name}!\n\n"
+            "Ваши админские возможности:\n"
+            "Все настройки тут: /menu\n"
+            "Чтобы посмотреть свои данные: /my_details\n"
+            "Для быстрой настройки пользователя, введите его ID или номер телефона.",
+            parse_mode=None
         )
     else:
         await send_message(message, f"❌ Роль не найдена сообщите это администратору.")
@@ -52,7 +61,9 @@ async def user_information(message: Message, user_manager: UserManager, bus_stop
             get_name=True, 
             get_bus_number=True
         )
-        stop_names = await bus_stops_manager.get_stops(bus_number=bus_number, get_stop_name=True)
+        stop_names = []
+        if bus_number:
+            stop_names = await bus_stops_manager.get_stops(bus_number=bus_number, get_stop_name=True)
     except Exception as e:
         await send_message(message, f"❌ Произошла ошибка при получении данных.", None)
         ConfigManager.log.logger.error(f"{e}\n❌ Произошла ошибка при получении данных в user_information у пользователя ID {user_id}.")
@@ -104,9 +115,20 @@ async def get_contact(message: Message, user_manager: UserManager):
         return
 
     if role == "admin":
-        await send_message(message, "иди нахуй", reply_markup=admin_main_keyboard)
+        await send_message(message, "Главное меню администратора:", reply_markup=admin_main_keyboard)
     elif role == "driver":
-        await send_message(message, "иди нахуй", reply_markup=driver_main_keyboard)
+        await send_message(message, "Главное меню водителя:", reply_markup=driver_main_keyboard)
     else:
         await send_message(message, f"❌ Роль не найдена сообщите это администратору.")
         ConfigManager.log.logger.critical(f"⚠️ У пользователя {name} не найдена роль {role}.")
+
+@router.callback_query(F.data == "cancel", ExistsFilter())
+@router.message(F.text == "отмена", ExistsFilter())
+async def cancel_action(event: Message | CallbackQuery, state: FSMContext):
+    if state:
+        await state.clear()
+        
+    if isinstance(event, CallbackQuery):
+        await edit_message(event.message, "↩️ Операция отменена.")
+    else:
+        await send_message(event, "↩️ Операция отменена.")

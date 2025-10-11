@@ -76,6 +76,30 @@ class BusStopsManager:
     async def get_bus_number(self, bus_id: int) -> str | None:
         self.check_parameters(bus_id=bus_id)
         return await self._get_bus_field("bus_number", "bus_id", bus_id)
+    
+    async def get_buses(
+        self,
+        get_bus_id: bool = False,
+        get_bus_number: bool = False
+    ) -> list[tuple[Any]] | list[Any]:
+        fields = [field for field, include in {
+            "bus_id": get_bus_id,
+            "bus_number": get_bus_number
+        }.items() if include]
+
+        if not fields:
+            raise ValueError("At least one field must be requested to retrieve bus parameters.")
+
+        async with aiosqlite.connect(data_path) as connect:
+            async with connect.execute(f"SELECT {', '.join(fields)} FROM buses ORDER BY bus_id") as cursor:
+                rows = await cursor.fetchall()
+
+        if not rows:
+            return []
+
+        if len(fields) > 1:
+            return rows
+        return [row[0] for row in rows]
 
     async def create_stop(
         self,
