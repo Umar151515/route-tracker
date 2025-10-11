@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 
 from core.managers import UserManager, ConfigManager
 from utils.text.processing import validate_phone, normalize_identifier, format_user_record
-from ....utils import send_message
+from utils.app import send_message
 from ....keyboards.admin import get_user_edit_fields_keyboard
 from ....states.admin import AdminUserEditStates
 from ....filters import admin_filter

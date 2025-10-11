@@ -1,5 +1,6 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+
 bus_settings_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(
         text="🚌 Получить все автобусы", 

@@ -23,8 +23,9 @@ admin_main_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-async def get_stops_keyboard(bus_stops_manager: BusStopsManager, bus_number: str, passenger_count: int) -> InlineKeyboardMarkup:
-    
+async def get_stops_keyboard(bus_number: str, passenger_count: int) -> InlineKeyboardMarkup:
+    bus_stops_manager = await BusStopsManager.create()
+
     stops = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(

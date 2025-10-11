@@ -1,10 +1,10 @@
 from aiogram import F, Router
-from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery, ContentType, User
+from aiogram.types import Message
 
 from core.managers import ConfigManager
 from core.managers import UserManager
-from ..utils import send_message, edit_message
+from utils.app import send_message
+
 
 router = Router()
 

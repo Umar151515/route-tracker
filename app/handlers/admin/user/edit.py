@@ -9,7 +9,7 @@ from utils.text.processing import (
     validate_name,
     normalize_identifier
 )
-from ....utils import send_message, edit_message
+from utils.app import send_message, edit_message
 from ....keyboards.admin import (
     get_user_edit_fields_keyboard,
 )

@@ -217,11 +217,6 @@ class GoogleSheetsManager:
         await asyncio.to_thread(self.sheet.update, [header] + data_to_keep)
 
     async def was_last_registration_today(self, driver_id: int | None = None) -> bool:
-        """
-        Проверяет, была ли последняя регистрация остановки сегодня.
-        Если driver_id указан — проверяет только этого водителя.
-        Если None — проверяет для всех (если хоть один водитель сегодня регистрировался).
-        """
         tz = ZoneInfo(ConfigManager.app["time_zone"])
         today = datetime.now(tz).strftime("%Y-%m-%d")
 
@@ -241,3 +236,27 @@ class GoogleSheetsManager:
                 if len(row) > 1 and row[1] == today:
                     return True
             return False
+        
+    async def get_last_n_days_data(self, n_days: int | None = None) -> list[list[str]]:
+        all_data = await asyncio.to_thread(self.sheet.get_all_values)
+        if len(all_data) <= 1:
+            return []
+
+        header = all_data[0]
+        records = all_data[1:]
+
+        if not records:
+            return []
+
+        unique_dates = sorted(list(set(row[1] for row in records if len(row) > 1)))
+
+        if not unique_dates:
+            return []
+
+        if not n_days or n_days <= 0 or n_days >= len(unique_dates):
+            return [header] + records
+
+        dates_to_include = unique_dates[-n_days:]
+        filtered_records = [row for row in records if len(row) > 1 and row[1] in dates_to_include]
+
+        return [header] + filtered_records

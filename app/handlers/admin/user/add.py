@@ -10,7 +10,7 @@ from utils.text.processing import (
     normalize_identifier,
     translate_role
 )
-from ....utils import send_message, edit_message, delete_message
+from utils.app import send_message, edit_message, delete_message
 from ....keyboards.admin import user_add_role_keyboard
 from ....states.admin import AdminUserAddStates
 from ....filters import admin_filter

@@ -6,7 +6,7 @@ from core.managers import UserManager
 from core.managers import BusStopsManager
 from core.managers import ConfigManager
 from core.managers import GoogleSheetsManager
-from ..utils import send_message, edit_message
+from utils.app import send_message, edit_message
 from ..keyboards import get_stops_keyboard
 from ..filters import driver_filter
 
@@ -97,7 +97,6 @@ async def register_passengers(
             "🛑 Выберите остановку:",
             reply=True,
             reply_markup=await get_stops_keyboard(
-                bus_stops_manager,
                 bus_number,
                 passenger_count
             )

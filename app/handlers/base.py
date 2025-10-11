@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from core.managers import UserManager
 from core.managers import BusStopsManager
 from core.managers import ConfigManager
-from ..utils import send_message, edit_message
+from utils.app import send_message, edit_message
 from ..keyboards import driver_main_keyboard, admin_main_keyboard
 from ..filters import ExistsFilter
 

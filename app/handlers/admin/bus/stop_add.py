@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 
 from core.managers import BusStopsManager, ConfigManager
 from utils.text.processing import validate_bus_number, validate_stop_name
-from ....utils import send_message, edit_message
+from utils.app import send_message, edit_message
 from ....filters import admin_filter
 from ....states.admin import AdminStopAddStates
 

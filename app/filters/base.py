@@ -3,7 +3,7 @@ from aiogram.types import Message
 
 from core.managers import ConfigManager
 from core.managers import UserManager
-from ..utils.message import send_message
+from utils.app.message import send_message
 from ..keyboards import phone_number_keyboard
 
 

@@ -10,7 +10,7 @@ from utils.text.processing import (
     format_user_record, 
     normalize_identifier
 )
-from ....utils import send_message, edit_message
+from utils.app import send_message, edit_message
 from ....keyboards.admin import (
     user_settings_keyboard,
     user_filters_keyboard,

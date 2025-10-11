@@ -53,7 +53,6 @@ class LoggingManager:
     def get_logs(self) -> str:
         if self.log_file.exists():
             try:
-                # Вдруг файл заблокирован или нет прав на чтение
                 with open(self.log_file, "r", encoding="utf-8") as f:
                     return f.read()
             except Exception as e:

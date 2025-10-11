@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 
 from core.managers import BusStopsManager, ConfigManager
 from utils.text.processing import validate_bus_number, validate_stop_name
-from ....utils import send_message, edit_message
+from utils.app import send_message, edit_message
 from ....states.admin import AdminBusAddStates
 from ....filters import admin_filter
 
@@ -45,7 +45,7 @@ async def handle_add_bus_number(
             return
 
     except Exception as e:
-        ConfigManager.log.logger.error(f"❌ Ошибка при проверке автобуса {bus_number}: {e}")
+        ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при проверке автобуса {bus_number}")
         await send_message(message, "❌ Произошла ошибка при проверке автобуса. Попробуйте еще раз:")
         await state.clear()
 
@@ -91,7 +91,7 @@ async def handle_add_bus_stops(
                     stop_order=stop_order
                 )
         except Exception as e:
-            ConfigManager.log.logger.error(f"❌ Ошибка при создании автобуса {bus_number} с остановками: {e}")
+            ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при создании автобуса {bus_number} с остановками.")
             await send_message(message, "❌ Произошла ошибка при создании автобуса.")
             await state.clear()
             return

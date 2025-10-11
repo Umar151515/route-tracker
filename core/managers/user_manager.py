@@ -84,19 +84,6 @@ class UserManager:
         limit: int | None = None,
         offset: int | None = None
     ) -> list[dict[str, Any]]:
-        """
-        Получает список пользователей с возможностью фильтрации по ролям и номерам автобусов.
-        
-        Args:
-            roles: Список ролей для фильтрации
-            bus_numbers: Список номеров автобусов для фильтрации
-            limit: Ограничение количества записей
-            offset: Смещение для пагинации
-        
-        Returns:
-            Список словарей с данными пользователей
-        """
-        # Валидация параметров фильтрации (оставляем, тут все четко)
         if roles:
             for role in roles:
                 if not validate_role(role):
@@ -113,25 +100,21 @@ class UserManager:
         if offset is not None and (not isinstance(offset, int) or offset < 0):
             raise ValueError("Offset must be non-negative integer")
 
-        # Построение запроса с параметризацией
         query_parts = ["SELECT phone_number, user_id, role, name, bus_number FROM users"]
         params = []
         
         where_conditions = []
         if roles:
-            # placeholders: ', '.join(["?"] * len(roles))
             where_conditions.append(f"role IN ({', '.join(['?'] * len(roles))})")
             params.extend(roles)
         
         if bus_numbers:
-            # placeholders: ', '.join(["?"] * len(bus_numbers))
             where_conditions.append(f"bus_number IN ({', '.join(['?'] * len(bus_numbers))})")
             params.extend(bus_numbers)
         
         if where_conditions:
             query_parts.append("WHERE " + " AND ".join(where_conditions))
         
-        # Добавление пагинации
         if limit is not None:
             query_parts.append("LIMIT ?")
             params.append(limit)
@@ -140,29 +123,17 @@ class UserManager:
                 query_parts.append("OFFSET ?")
                 params.append(offset)
 
-        # --- СУТЬ ИЗМЕНЕНИЙ ЗДЕСЬ ---
-        # 1. Используем row_factory
-        # 2. Убираем ручное создание словарей
         async with aiosqlite.connect(data_path) as connect:
-            # Магия, которая заставляет aiosqlite возвращать результаты как объекты-словари
             connect.row_factory = aiosqlite.Row 
             
             full_query = " ".join(query_parts)
             cursor = await connect.execute(full_query, params)
             
-            # fetchall() теперь возвращает список aiosqlite.Row объектов
             rows = await cursor.fetchall()
             
-            # Преобразуем aiosqlite.Row в чистые Python-словари
             return [dict(row) for row in rows] 
         
     async def get_users_stats(self) -> dict[str, Any]:
-        """
-        Получает статистику по пользователям.
-        
-        Returns:
-            Словарь со статистикой
-        """
         async with aiosqlite.connect(data_path) as connect:
             async with connect.execute("SELECT COUNT(*) FROM users") as cursor:
                 total_users = (await cursor.fetchone())[0]
