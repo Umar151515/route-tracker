@@ -5,8 +5,6 @@ from ..config import data_path
 from utils.text.processing import validate_bus_number, validate_stop_name
 
 
-# ебашим
-
 class BusStopsManager:
     _instance: "BusStopsManager" = None
     _initialized = False
@@ -285,5 +283,3 @@ class BusStopsManager:
             raise ValueError("Invalid stop name.")
         elif stop_order is not None and (not isinstance(stop_order, int) or stop_order <= 0):
             raise ValueError("Invalid stop order.")
-
-# заебался ебашить

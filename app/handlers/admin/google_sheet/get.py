@@ -49,25 +49,28 @@ async def handle_get_data(
         data = await sheets_manager.get_last_n_days_data(days)
 
     except Exception as e:
-        ConfigManager.log.logger.error(f"❌ Ошибка при получении данных таблицы: {e}")
+        ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при получении данных таблицы.")
         await send_message(message, "❌ Произошла ошибка при получении данных из таблицы.")
         return
 
-    header = data[0]
-    records = data[1:]
-    
-    text = (
-        f"📊 <b>Данные из таблицы ({days_text})</b>\n"
-        f"📈 Всего записей: <b>{len(records)}</b>\n\n"
-    )
-
-    header_text = " | ".join(f"<b>{h}</b>" for h in header)
-    text += f"🧾 <b>Заголовки:</b>\n{header_text}\n\n"
-
-    for i, record in enumerate(records, 1):
-        row_text = "\n".join(
-            [f"<b>{header[j]}:</b> {record[j]}" for j in range(len(header))]
+    if not data:
+        text = "Нет данных."
+    else:
+        header = data[0]
+        records = data[1:]
+        
+        text = (
+            f"📊 <b>Данные из таблицы ({days_text})</b>\n"
+            f"📈 Всего записей: <b>{len(records)}</b>\n\n"
         )
-        text += f"🔹 <b>Запись {i}</b>\n{row_text}\n\n"
+
+        header_text = " | ".join(f"<b>{h}</b>" for h in header)
+        text += f"🧾 <b>Заголовки:</b>\n{header_text}\n\n"
+
+        for i, record in enumerate(records, 1):
+            row_text = "\n".join(
+                [f"<b>{header[j]}:</b> {record[j]}" for j in range(len(header))]
+            )
+            text += f"🔹 <b>Запись {i}</b>\n{row_text}\n\n"
 
     await send_message(message, text, parse_mode=ParseMode.HTML)

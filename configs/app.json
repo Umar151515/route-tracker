@@ -1,3 +1,5 @@
 {
-    "time_zone": "Asia/Bishkek"
+    "time_zone": "Asia/Bishkek",
+    "min_passenger_count": 0,
+    "max_passenger_count": 200
 }

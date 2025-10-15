@@ -62,7 +62,7 @@ async def user_information(message: Message, user_manager: UserManager, bus_stop
             get_bus_number=True
         )
         stop_names = []
-        if bus_number:
+        if bus_number and await bus_stops_manager.bus_exists(bus_number=bus_number):
             stop_names = await bus_stops_manager.get_stops(bus_number=bus_number, get_stop_name=True)
     except Exception as e:
         await send_message(message, f"❌ Произошла ошибка при получении данных.", None)
@@ -81,22 +81,20 @@ async def user_information(message: Message, user_manager: UserManager, bus_stop
             parse_mode=ParseMode.HTML
         )
     elif role == "driver":
-        stops_list_str = "— " + "\n— ".join(stop_names) if stop_names else "Нет закрепленных остановок. Cообщите это администратору!"
+        stops_list_str = "— " + "\n— ".join(stop_names) if stop_names else "Нет закрепленных остановок или автобус не существует. Cообщите это администратору!"
         if not stop_names:
             ConfigManager.log.logger.critical(f"⚠️ У пользователя {name} нет закрепленных остановок.")
 
         await send_message(
-            message, 
-            (
-                "<b>🚌 Ваши рабочие данные:</b>\n\n"
-                f"<b>Имя водителя:</b> {name}\n"
-                f"<b>Номер автобуса:</b> <code>{bus_number}</code>\n"
-                f"<b>Роль:</b> Водитель\n"
-                f"<b>Твой ID:</b> <code>{user_id}</code>\n\n"
-                
-                f"<b>🚏 Закрепленные остановки:</b>\n"
-                f"{stops_list_str}"
-            ), 
+            message,
+            "<b>🚌 Ваши рабочие данные:</b>\n\n"
+            f"<b>Имя водителя:</b> {name}\n"
+            f"<b>Номер автобуса:</b> {f"<code>{bus_number}</code>" if bus_number else "Автобус не закреплен"}\n"
+            f"<b>Роль:</b> Водитель\n"
+            f"<b>Твой ID:</b> <code>{user_id}</code>\n\n"
+            
+            f"<b>🚏 Закрепленные остановки:</b>\n"
+            f"{stops_list_str}",
             parse_mode=ParseMode.HTML
         )
     else:
@@ -123,7 +121,6 @@ async def get_contact(message: Message, user_manager: UserManager):
         ConfigManager.log.logger.critical(f"⚠️ У пользователя {name} не найдена роль {role}.")
 
 @router.callback_query(F.data == "cancel", ExistsFilter())
-@router.message(F.text == "отмена", ExistsFilter())
 async def cancel_action(event: Message | CallbackQuery, state: FSMContext):
     if state:
         await state.clear()

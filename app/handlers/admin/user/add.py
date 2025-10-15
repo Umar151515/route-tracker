@@ -8,7 +8,8 @@ from utils.text.processing import (
     validate_bus_number, 
     validate_name,
     normalize_identifier,
-    translate_role
+    translate_role,
+    format_user_record
 )
 from utils.app import send_message, edit_message, delete_message
 from ....keyboards.admin import user_add_role_keyboard
@@ -30,23 +31,23 @@ async def cb_add_user_start(query: CallbackQuery, state: FSMContext):
 
 @router.message(AdminUserAddStates.waiting_for_phone, admin_filter())
 async def handle_add_user_phone(message: Message, state: FSMContext, user_manager: UserManager):
-    phone = normalize_identifier(message.text.strip())
+    phone_number = normalize_identifier(message.text.strip())
     
     if message.text.strip() == "0":
         await state.clear()
         await send_message(message, "↩️ Добавление пользователя отменено.")
         return
     
-    if not validate_phone(phone) or "+" not in message.text:
+    if not validate_phone(phone_number) or "+" not in message.text:
         await send_message(message, "❌ **Неверный формат!** Введите корректный номер телефона в формате `+996...`.")
         return
     
     try:
-        if await user_manager.user_exists(phone_number=phone):
+        if await user_manager.user_exists(phone_number=phone_number):
             await send_message(message, "❌ **Пользователь с таким номером телефона уже существует! Попробуйте ещё раз.**")
             return
             
-        await state.update_data(phone=phone)
+        await state.update_data(phone_number=phone_number)
         await state.set_state(AdminUserAddStates.waiting_for_name)
         await send_message(
             message,
@@ -56,11 +57,11 @@ async def handle_add_user_phone(message: Message, state: FSMContext, user_manage
         )
         
     except Exception as e:
-        ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при проверке телефона для добавления пользователя: '{phone}'")
+        ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при проверке телефона для добавления пользователя: '{phone_number}'")
         await send_message(message, "❌ Произошла ошибка! Не удалось проверить номер телефона.")
 
 @router.message(AdminUserAddStates.waiting_for_name, admin_filter())
-async def handle_add_user_name(message: Message, state: FSMContext):
+async def handle_add_user_name(message: Message, state: FSMContext, user_manager: UserManager):
     name = message.text.strip()
     
     if name == "0":
@@ -69,8 +70,17 @@ async def handle_add_user_name(message: Message, state: FSMContext):
         return
     
     if not validate_name(name):
-        await send_message(message, "❌ Неверный формат имени!")
+        await send_message(message, "❌ Неверный формат имени! Попробуйте ещё раз.")
         return
+    try:
+        names = [user["name"] for user in await user_manager.get_users()]
+        if name in names:
+            await send_message(message, "❌ Такое имя уже занято другим пользователем! Попробуйте ещё раз.")
+            return
+    except Exception as e:
+        ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при получении данные пользователя для добавления пользователя.")
+        await edit_message(message, "❌ Произошла ошибка! Не удалось загрузить данные пользователей.")
+        await state.clear()
     
     await state.update_data(name=name)
     await state.set_state(AdminUserAddStates.waiting_for_role)
@@ -84,7 +94,6 @@ async def handle_add_user_name(message: Message, state: FSMContext):
 @router.callback_query(F.data.startswith("user:add:role:"), admin_filter())
 async def cb_add_user_role(query: CallbackQuery, state: FSMContext, bus_stops_manager: BusStopsManager):
     role = query.data.split(":")[-1]
-    data = await state.get_data()
     
     await state.update_data(role=role)
     
@@ -113,14 +122,14 @@ async def cb_add_user_role(query: CallbackQuery, state: FSMContext, bus_stops_ma
 
 async def finish_user_creation(message: Message, state: FSMContext, bus_number: str | None = None):
     data = await state.get_data()
-    phone = data.get("phone")
+    phone_number = data.get("phone_number")
     name = data.get("name")
     role = data.get("role")
     user_manager = await UserManager.create()
     
     try:
         await user_manager.create_user(
-            phone_number=phone,
+            phone_number=phone_number,
             role=role,
             name=name,
             bus_number=bus_number
@@ -136,14 +145,14 @@ async def finish_user_creation(message: Message, state: FSMContext, bus_number: 
             message,
             f"✅ **Пользователь успешно добавлен!**\n\n"
             f"**Имя:** {name}\n"
-            f"**Телефон:** `+{phone}`\n"
+            f"**Телефон:** `+{phone_number}`\n"
             f"**Роль:** {translate_role(role)}\n"
             f"{bus_info}"
         )
         await state.clear()
         
     except Exception as e:
-        ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при создании пользователя: {phone}, {name}, {role}, {bus_number}")
+        ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при создании пользователя: {phone_number}, {name}, {role}, {bus_number}")
         await send_message(message, "❌ Произошла ошибка! Не удалось создать пользователя.")
         await state.clear()
 
@@ -157,7 +166,7 @@ async def handle_add_user_bus_number(message: Message, state: FSMContext, bus_st
         return
     
     if not validate_bus_number(bus_number):
-        await send_message(message, "❌ **Неверный формат номера автобуса!**")
+        await send_message(message, "❌ **Неверный формат номера автобуса!** Попробуйте ещё раз.")
         return
     
     try:
@@ -169,5 +178,6 @@ async def handle_add_user_bus_number(message: Message, state: FSMContext, bus_st
         await finish_user_creation(message, state, bus_number)
         
     except Exception as e:
+        await state.clear()
         ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при проверке автобуса для добавления пользователя: '{bus_number}'")
         await send_message(message, "❌ Произошла ошибка! Не удалось проверить номер автобуса.")

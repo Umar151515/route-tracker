@@ -33,7 +33,7 @@ class UserManager:
                     phone_number TEXT NOT NULL UNIQUE,
                     user_id INTEGER UNIQUE,
                     role TEXT NOT NULL,
-                    name VARCHAR(123) NOT NULL,
+                    name VARCHAR(123) NOT NULL UNIQUE,
                     bus_number VARCHAR(30)
             );""")
 
@@ -201,29 +201,35 @@ class UserManager:
         self.check_parameters(phone_number, user_id, new_role, new_name, new_bus_number)
         self.check_parameters(new_phone_number, new_user_id)
 
-        if new_phone_number:
-            new_user_id = None
-
-        fields_to_update = {
-            "phone_number": new_phone_number,
-            "user_id": new_user_id,
-            "role": new_role,
-            "name": new_name,
-            "bus_number": new_bus_number
-        }
-        fields = {key: value for key, value in fields_to_update.items() if value is not None}
-        if not fields:
-            raise ValueError("At least one field must be provided to update the user.")
-
         async with aiosqlite.connect(data_path) as connect:
             search_key = self._get_search_key(phone_number, user_id)
             search_field = "phone_number" if phone_number else "user_id"
 
             await connect.execute("PRAGMA foreign_keys = ON;")
-            await connect.execute(
-                f"UPDATE users SET {', '.join(f'{key} = ?' for key in fields.keys())} WHERE {search_field} = ?",
-                (*fields.values(), search_key)
-            )
+
+            if new_phone_number:
+                await connect.execute(
+                    f"UPDATE users SET phone_number = ?, user_id = NULL WHERE {search_field} = ?",
+                    (new_phone_number, search_key)
+                )
+
+            fields_to_update = {
+                "role": new_role,
+                "name": new_name,
+                "bus_number": new_bus_number,
+            }
+
+            if not new_phone_number and new_user_id is not None:
+                fields_to_update["user_id"] = new_user_id
+
+            fields = {k: v for k, v in fields_to_update.items() if v is not None}
+
+            if fields:
+                await connect.execute(
+                    f"UPDATE users SET {', '.join(f'{k} = ?' for k in fields.keys())} WHERE {search_field} = ?",
+                    (*fields.values(), search_key)
+                )
+
             await connect.commit()
 
     async def delete_user(self, phone_number: str | None = None, user_id: int | None = None):
@@ -235,6 +241,20 @@ class UserManager:
 
             await connect.execute("PRAGMA foreign_keys = ON;")
             await connect.execute(f"DELETE FROM users WHERE {search_field} = ?", (search_key,))
+            await connect.commit()
+
+    async def remove_bus_number(self, phone_number: str | None = None, user_id: int | None = None):
+        self.check_parameters(phone_number, user_id)
+
+        async with aiosqlite.connect(data_path) as connect:
+            search_key = self._get_search_key(phone_number, user_id)
+            search_field = "phone_number" if phone_number else "user_id"
+
+            await connect.execute("PRAGMA foreign_keys = ON;")
+            await connect.execute(
+                f"UPDATE users SET bus_number = NULL WHERE {search_field} = ?",
+                (search_key,)
+            )
             await connect.commit()
 
     async def user_exists(self, phone_number: str | None = None, user_id: int | None = None) -> bool:

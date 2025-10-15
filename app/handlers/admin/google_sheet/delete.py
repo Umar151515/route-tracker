@@ -58,8 +58,8 @@ async def handle_delete_data(
 
     unique_dates = set()
     for row in current_data[1:]:
-        if len(row) > 1 and row[1]:
-            unique_dates.add(row[1])
+        if len(row) > 0 and row[0]:
+            unique_dates.add(row[0])
     
     total_days = len(unique_dates)
     

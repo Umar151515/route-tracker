@@ -15,25 +15,34 @@ router = Router()
 
 @router.message(Command("delete_last_entry"), driver_filter())
 @router.message(F.text == "🗑️ Удалить последнюю запись", driver_filter())
-async def delete_last_entry(message: Message, sheets_manager: GoogleSheetsManager):
-    user_id = message.from_user.id
-    
-    if not await sheets_manager.was_last_registration_today(user_id):
-        await send_message(message, f"❗ Дальше вы уже не можете удалять записи", None)
-        return
-    
+async def delete_last_entry(
+    message: Message,
+    sheets_manager: GoogleSheetsManager,
+    user_manager: UserManager
+):
     user_id = message.from_user.id
 
     try:
-        await sheets_manager.delete_nth_last_driver_entry(user_id)
+        driver_name = await user_manager.get_parameters(user_id=user_id, get_name=True)
     except Exception as e:
-        await send_message(message, f"❌ Произошла ошибка при удалении.", None)
-        ConfigManager.log.logger.error(f"{e}\n❌ Произошла ошибка при удалении последней записи у пользователя ID {user_id}.")
+        await send_message(message, f"❌ Произошла ошибка при получении имени водителя.",)
+        ConfigManager.log.logger.error(f"{e}\n❌ Произошла ошибка при получении имени водителя для регистрации остановки ID {user_id}.")
+    
+    if not await sheets_manager.was_last_registration_today(driver_name):
+        await send_message(message, f"❗ Дальше вы уже не можете удалять записи", None)
+        return
+
+    try:
+
+        await sheets_manager.delete_nth_last_driver_entry(driver_name)
+    except Exception as e:
+        await send_message(message, f"❌ Произошла ошибка при удалении.")
+        ConfigManager.log.logger.error(f"{e}\n❌ Произошла ошибка при удалении последней записи у водителя ID {user_id}.")
         return
     
     await send_message(message, "Запись успешно удалена.")
 
-@router.message(lambda message: message.text.isdigit(), driver_filter())
+@router.message(F.text.func(lambda text: text and text.isdigit()), driver_filter())
 async def register_passengers(
     message: Message, 
     user_manager: UserManager,
@@ -47,8 +56,12 @@ async def register_passengers(
         await send_message(message, "❌ Пожалуйста, введите только число пассажиров.", True)
         return
 
-    if passenger_count < 0 or passenger_count > 200:
-        await send_message(message, "❌ Количество пассажиров должно быть от 0 до 200.", True)
+    if passenger_count < ConfigManager.app["min_passenger_count"] or passenger_count > ConfigManager.app["max_passenger_count"]:
+        await send_message(
+            message,
+            f"❌ Количество пассажиров должно быть от {ConfigManager.app["min_passenger_count"]} до {ConfigManager.app["max_passenger_count"]}.",
+            True
+        )
         return
     
     try:
@@ -125,7 +138,6 @@ async def handle_register_passengers(
 
     try:
         await sheets_manager.add_row(
-            user_id,
             driver_name,
             bus_number,
             stop_name,

@@ -6,19 +6,21 @@ user_settings_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="👥 Показать всех пользователей", callback_data="user:get_all")],
     [InlineKeyboardButton(text="✏️ Редактировать пользователя", callback_data="user:edit")],
     [InlineKeyboardButton(text="➕ Добавить пользователя", callback_data="user:add")],
-    [InlineKeyboardButton(text="🗑️ Удалить пользователя", callback_data="user:delete")]
+    [InlineKeyboardButton(text="🗑️ Удалить пользователя", callback_data="user:delete")],
+    [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel")]
 ])
 
 user_filters_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="👨‍💻 Показать всех", callback_data="user:get_all:all")],
     [InlineKeyboardButton(text="🎭 Отфильтровать по роли", callback_data="user:get_all:by_role_menu")],
-    [InlineKeyboardButton(text="🚌 Отфильтровать по автобусу", callback_data="user:get_all:by_bus")]
+    [InlineKeyboardButton(text="🚌 Отфильтровать по автобусу", callback_data="user:get_all:by_bus")],
+    [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel")]
 ])
 
 user_roles_filter_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="🚛 Водители", callback_data="user:get_all:by_role:driver")],
     [InlineKeyboardButton(text="👑 Администраторы", callback_data="user:get_all:by_role:admin")],
-    [InlineKeyboardButton(text="⬅️ Назад", callback_data="user:get_all")]
+    [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel")]
 ])
 
 user_add_role_keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -29,7 +31,7 @@ user_add_role_keyboard = InlineKeyboardMarkup(inline_keyboard=[
 
 user_delete_confirm_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="✅ Да, удалить", callback_data="user:delete:confirm")],
-    [InlineKeyboardButton(text="❌ Нет, отменить", callback_data="user:delete:cancel")]
+    [InlineKeyboardButton(text="❌ Отменить", callback_data="cancel")]
 ])
 
 def get_user_edit_fields_keyboard(role: str) -> InlineKeyboardMarkup:

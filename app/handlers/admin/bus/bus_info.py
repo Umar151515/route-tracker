@@ -67,7 +67,6 @@ async def cb_get_bus_info_start(query: CallbackQuery, state: FSMContext, bus_sto
     await edit_message(
         query.message,
         "🔍 Введите номер автобуса для получения информации:\n\n"
-        "💡 Пример: 12 или 45А\n\n"
         f"**Доступные автобусы:** `{', '.join(f'`{number}`' for number in bus_numbers)}`"
     )
 

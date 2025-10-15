@@ -24,6 +24,8 @@ def format_user_record(
         user_id: int, 
         bus_number: str | None = None
     ) -> str:
+    if bus_number is None:
+        bus_number = "Не закреплен"
     bus_info = f"**Автобус:** {bus_number}\n" if role == "driver" and bus_number else ""
     return (
         f"**Имя:** {name}\n"

@@ -30,23 +30,26 @@ async def cb_remove_stop_start(
     await edit_message(
         query.message,
         "➖ Введите номер автобуса для удаления остановки:\n\n"
-        "💡 Пример: 12 или 45А\n\n"
-        f"**Доступные автобусы:** `{', '.join(f'`{number}`' for number in bus_numbers)}`"
+        f"**Доступные автобусы:** `{', '.join(f'`{number}`' for number in bus_numbers)}`\n\n"
+        "*Для отмены отправьте `0`*"
     )
 
 @router.message(AdminStopRemoveStates.waiting_for_bus_number_for_remove_stop, admin_filter())
 async def handle_remove_stop_bus_number(message: Message, state: FSMContext, bus_stops_manager: BusStopsManager):
     bus_number = message.text.strip()
 
-    if not validate_bus_number(bus_number):
-        await send_message(message, "❌ Неверный формат номера автобуса.")
+    if bus_number == "0":
         await state.clear()
+        await send_message(message, "↩️ Удаление остановки отменено.")
+        return
+
+    if not validate_bus_number(bus_number):
+        await send_message(message, "❌ Неверный формат номера автобуса. Попробуйте еще раз.")
         return
 
     try:
         if not await bus_stops_manager.bus_exists(bus_number=bus_number):
-            await send_message(message, f"❌ Автобус с номером '{bus_number}' не найден.")
-            await state.clear()
+            await send_message(message, f"❌ Автобус с номером '{bus_number}' не найден. Попробуйте еще раз.")
             return
 
         stops = await bus_stops_manager.get_stops(bus_number=bus_number, get_stop_name=True, get_stop_order=True)
@@ -61,7 +64,8 @@ async def handle_remove_stop_bus_number(message: Message, state: FSMContext, bus
         await send_message(
             message,
             f"🛑 Остановки автобуса {bus_number}:\n{stops_text}\n\n"
-            "➖ Введите порядковый номер остановки для удаления:"
+            "➖ Введите порядковый номер остановки для удаления:\n\n"
+            "*Для отмены отправьте `0`*"
         )
     except Exception as e:
         ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при получении остановок автобуса {bus_number}")
@@ -74,29 +78,36 @@ async def handle_remove_stop_order(message: Message, state: FSMContext, bus_stop
     bus_number = data.get('bus_number')
     stop_order_str = message.text.strip()
 
-    await state.clear()
+    if stop_order_str == "0":
+        await state.clear()
+        await send_message(message, "↩️ Удаление остановки отменено.")
+        return
 
     try:
         max_stop_order = len(await bus_stops_manager.get_stops(bus_number=bus_number, get_stop_id=True))
     except Exception as e:
         ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при получении остановок автобуса {bus_number}")
         await send_message(message, "❌ Ошибка при получении остановок автобуса.")
+        await state.clear()
         return
 
     if stop_order_str.isdigit():
         stop_order = int(stop_order_str)
         if stop_order <= 0:
-            await send_message(message, "❌ Порядковый номер должен быть положительным числом.")
+            await send_message(message, "❌ Порядковый номер должен быть положительным числом. Попробуйте еще раз.")
             return
         elif stop_order > max_stop_order:
-            await send_message(message, "❌ Нет такой остановки.")
+            await send_message(message, "❌ Нет такой остановки. Попробуйте еще раз.")
             return
     else:
-        await send_message(message, "❌ Неверный формат порядкового номера.")
+        await send_message(message, "❌ Неверный формат порядкового номера. Попробуйте еще раз.")
+        return
 
     try:
         await bus_stops_manager.delete_stop(bus_number=bus_number, stop_order=stop_order)
         await send_message(message, f"✅ Остановка под номером {stop_order} успешно удалена из автобуса '{bus_number}'!")
+        await state.clear()
     except Exception as e:
         ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при удалении остановки из автобуса '{bus_number}' по порядку {stop_order}.")
         await send_message(message, "❌ Произошла ошибка при удалении остановки.")
+        await state.clear()

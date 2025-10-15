@@ -30,30 +30,40 @@ async def cb_add_stop_start(
     await edit_message(
         query.message,
         "➕ Введите номер автобуса для добавления остановки:\n\n"
-        "💡 Пример: 12 или 45А\n\n"
-        f"**Доступные автобусы:** `{', '.join(f'`{number}`' for number in bus_numbers)}`"
+        f"**Доступные автобусы:** `{', '.join(f'`{number}`' for number in bus_numbers)}`\n\n"
+        "*Для отмены отправьте `0`*"
     )
 
 @router.message(AdminStopAddStates.waiting_for_bus_number_for_add_stop, admin_filter())
 async def handle_add_stop_bus_number(message: Message, state: FSMContext, bus_stops_manager: BusStopsManager):
     bus_number = message.text.strip()
 
+    if bus_number == "0":
+        await state.clear()
+        await send_message(message, "↩️ Добавление остановки отменено.")
+        return
+
     if not validate_bus_number(bus_number):
-        await send_message(message, "❌ Неверный формат номера автобуса.")
+        await send_message(message, "❌ Неверный формат номера автобуса. Попробуйте еще раз.")
         return
 
     try:
         if not await bus_stops_manager.bus_exists(bus_number=bus_number):
-            await send_message(message, f"❌ Автобус с номером '{bus_number}' не найден.")
+            await send_message(message, f"❌ Автобус с номером '{bus_number}' не найден. Попробуйте еще раз.")
             return
     except Exception as e:
         ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при проверке автобуса {bus_number}.")
         await send_message(message, "❌ Произошла ошибка при проверке автобуса.")
         await state.clear()
+        return
 
     await state.update_data(bus_number=bus_number)
     await state.set_state(AdminStopAddStates.waiting_for_stop_name)
-    await send_message(message, "🛑 Введите название остановки.")
+    await send_message(
+        message, 
+        "🛑 Введите название остановки.\n\n"
+        "*Для отмены отправьте `0`*"
+    )
 
 @router.message(AdminStopAddStates.waiting_for_stop_name, admin_filter())
 async def handle_add_stop_name(
@@ -64,9 +74,13 @@ async def handle_add_stop_name(
     stop_name = message.text.strip()
     data = await state.get_data()
 
-    if not validate_stop_name(stop_name):
-        await send_message(message, "❌ Неверный формат названия остановки.")
+    if stop_name == "0":
         await state.clear()
+        await send_message(message, "↩️ Добавление остановки отменено.")
+        return
+
+    if not validate_stop_name(stop_name):
+        await send_message(message, "❌ Неверный формат названия остановки. Попробуйте еще раз.")
         return
     
     try:
@@ -81,9 +95,10 @@ async def handle_add_stop_name(
     await state.set_state(AdminStopAddStates.waiting_for_stop_order)
     await send_message(
         message,
-        "🔢 Введи номер остановки для вставки (или 0, чтобы вставить в конец):\n"
-        "💡 Пример: 1 (для первой) или 0 (в конец)\n\n"
-        f"Остановки: \n{stops_list}"
+        "🔢 Введи номер остановки для вставки (или -1, чтобы вставить в конец):\n"
+        "💡 Пример: 1 (для первой) или -1 (в конец)\n\n"
+        f"Остановки: \n{stops_list}\n\n"
+        "*Для отмены отправьте `0`*"
     )
 
 @router.message(AdminStopAddStates.waiting_for_stop_order, admin_filter())
@@ -93,23 +108,28 @@ async def handle_add_stop_order(message: Message, state: FSMContext, bus_stops_m
     stop_name = data.get('stop_name')
     stop_order_str = message.text.strip()
 
-    await state.clear()
+    if stop_order_str == "0":
+        await state.clear()
+        await send_message(message, "↩️ Добавление остановки отменено.")
+        return
 
-    if stop_order_str == '0':
+    if stop_order_str == '-1':
         stop_order = None
     elif stop_order_str.isdigit():
         stop_order = int(stop_order_str)
         if stop_order <= 0:
-            await send_message(message, "❌ Порядковый номер должен быть положительным числом.")
+            await send_message(message, "❌ Порядковый номер должен быть положительным числом. Попробуйте еще раз.")
             return
     else:
-        await send_message(message, "❌ Неверный формат порядкового номера.")
+        await send_message(message, "❌ Неверный формат порядкового номера. Попробуйте еще раз.")
         return
 
     try:
         await bus_stops_manager.create_stop(bus_number=bus_number, stop_name=stop_name, stop_order=stop_order)
         order_text = "в конец" if stop_order is None else f"под номером {stop_order}"
         await send_message(message, f"✅ Остановка '{stop_name}' успешно добавлена в автобус '{bus_number}' {order_text}!")
+        await state.clear()
     except Exception as e:
         ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при добавлении остановки '{stop_name}' в автобус '{bus_number}'.")
         await send_message(message, "❌ Произошла ошибка при добавлении остановки.")
+        await state.clear()

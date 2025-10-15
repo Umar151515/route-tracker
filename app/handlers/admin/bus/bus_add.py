@@ -17,9 +17,8 @@ async def cb_add_bus_start(query: CallbackQuery, state: FSMContext):
     await edit_message(
         query.message,
         "➕ **Создание нового автобуса**\n\n"
-        "🚌 Введите номер автобуса:\n\n"
-        "💡 Пример: 12 или 45А\n\n"
-        "❌ Для отмены введите: 0"
+        "Введите номер автобуса:\n\n"
+        "*Для отмены отправьте 0*"
     )
 
 @router.message(AdminBusAddStates.waiting_for_bus_number, admin_filter())
@@ -31,7 +30,7 @@ async def handle_add_bus_number(
     bus_number = message.text.strip()
 
     if bus_number == "0":
-        await send_message(message, "❌ Создание автобуса отменено.")
+        await send_message(message, "↩️ Создание автобуса отменено.")
         await state.clear()
         return
 
@@ -141,8 +140,7 @@ async def handle_add_bus_stops(
 
     response_parts.append(
         f"\n➡️ Продолжайте вводить остановки или:\n"
-        f"• '0' - завершить создание автобуса\n"
-        f"• 'отмена' - отменить создание"
+        f"• '0' - завершить создание автобуса"
     )
 
     await send_message(message, "\n".join(response_parts), parse_mode=None)

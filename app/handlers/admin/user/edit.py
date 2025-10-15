@@ -25,34 +25,38 @@ async def cb_edit_user_ask_identifier(query: CallbackQuery, state: FSMContext):
     await edit_message(
         query.message, 
         "✏️ **Редактирование пользователя**\n\n"
-        "Введите **Telegram ID** или **номер телефона** (в формате `+996...`) пользователя, которого хотите отредактировать."
+        "Введите **Telegram ID** или **номер телефона** (в формате `+996...`) пользователя, которого хотите отредактировать.\n\n"
+        "*Для отмены отправьте `0`*"
     )
 
 @router.message(AdminUserEditStates.waiting_for_identifier, admin_filter())
 async def handle_edit_identifier(message: Message, state: FSMContext, user_manager: UserManager):
-    identifier = normalize_identifier(message.text)
+    identifier = normalize_identifier(message.text.strip())
+    
+    if message.text.strip() == "0":
+        await state.clear()
+        await send_message(message, "↩️ Редактирование пользователя отменено.")
+        return
+
     user_id = None
     role = None
 
     try:
         if validate_phone(identifier) and "+" in message.text:
             if not await user_manager.user_exists(phone_number=identifier):
-                await send_message(message, "❌ Такого пользователя не существует.")
-                await state.clear()
+                await send_message(message, "❌ Такого пользователя не существует. Попробуйте еще раз.")
                 return
             user_id, role = await user_manager.get_parameters(phone_number=identifier, get_user_id=True, get_role=True)
         
         elif identifier.isdigit():
             user_id = int(identifier)
             if not await user_manager.user_exists(user_id=user_id):
-                await send_message(message, "❌ Такого пользователя не существует.")
-                await state.clear()
+                await send_message(message, "❌ Такого пользователя не существует. Попробуйте еще раз.")
                 return
             role = await user_manager.get_parameters(user_id=user_id, get_role=True)
             
         else:
-            await send_message(message, "❌ **Неверный формат!** Введите корректный ID или номер телефона.")
-            await state.clear()
+            await send_message(message, "❌ **Неверный формат!** Введите корректный ID или номер телефона. Попробуйте еще раз.")
             return
 
         if user_id == message.from_user.id:
@@ -106,12 +110,12 @@ async def cb_edit_field_choice(query: CallbackQuery, state: FSMContext, user_man
             bus_numbers = await bus_stops_manager.get_buses(get_bus_number=True)
             if not bus_numbers:
                 await edit_message(query.message, "📭 В системе пока нет зарегистрированных автобусов.")
-                state.clear()
+                await state.clear()
                 return
         except Exception as e:
             ConfigManager.log.logger.error(f"{e}\n❌ Произошла ошибка при получении списка автобусов для cb_edit_field_choice.")
             await edit_message(query.message, "❌ Произошла ошибка! Не удалось загрузить список доступных автобусов.")
-            state.clear()
+            await state.clear()
             return
         prompt += f"\n\n**Доступные автобусы:** `{', '.join(f'`{number}`' for number in bus_numbers)}`"
     
@@ -130,13 +134,14 @@ async def handle_edit_new_value(message: Message, state: FSMContext, user_manage
     field = data.get("field")
     new_value = message.text.strip()
     
-    await state.clear()
-
     if new_value == "0":
+        await state.clear()
         await send_message(message, "↩️ Редактирование отменено.")
         return
+        
     if not identifier or not field:
         await send_message(message, "❌ Критическая ошибка! Данные для редактирования потеряны. Начните заново.")
+        await state.clear()
         return
 
     try:
@@ -150,6 +155,16 @@ async def handle_edit_new_value(message: Message, state: FSMContext, user_manage
         if field == "phone" and validate_phone(normalize_identifier(new_value)):
             kwargs_update["new_phone_number"] = normalize_identifier(new_value)
         elif field == "name" and validate_name(new_value):
+            try:
+                names = [user["name"] for user in await user_manager.get_users()]
+                if new_value in names:
+                    await send_message(message, "❌ Такое имя уже занято другим пользователем! Попробуйте ещё раз.")
+                    return
+            except Exception as e:
+                ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при получении данные пользователя для добавления пользователя.")
+                await send_message(message, "❌ Произошла ошибка! Не удалось загрузить данные пользователей.")
+                await state.clear()
+                return
             kwargs_update["new_name"] = new_value
         elif field == "bus_number" and validate_bus_number(new_value):
             try:
@@ -157,19 +172,22 @@ async def handle_edit_new_value(message: Message, state: FSMContext, user_manage
                 if new_value in bus_numbers:
                     kwargs_update["new_bus_number"] = new_value
                 else:
-                    await send_message(message, f"❌ Такого автобуса не существует.")
+                    await send_message(message, f"❌ Такого автобуса не существует. Попробуйте еще раз.")
                     return
             except Exception as e:
                 ConfigManager.log.logger.error(f"{e}\n❌ Произошла ошибка при получении списка автобусов для cb_edit_field_choice.")
                 await send_message(message, "❌ Произошла ошибка! Не удалось загрузить список доступных автобусов.")
+                await state.clear()
                 return
         else:
-            await send_message(message, f"❌ **Неверный формат!** Введенное значение «{new_value}» некорректно. Попробуйте снова.")
+            await send_message(message, f"❌ **Неверный формат!**. Попробуйте снова.")
             return
 
         await user_manager.set_user(**kwargs_search, **kwargs_update)
         await send_message(message, "✅ **Успешно!** Данные пользователя обновлены.")
+        await state.clear()
 
     except Exception as e:
         ConfigManager.log.logger.error(f"{e}\n❌ Произошла ошибка при обновлении поля '{field}' для пользователя '{identifier}'.")
         await send_message(message, "❌ Произошла ошибка! Не удалось обновить данные пользователя. Возможно, такой номер телефона уже занят.")
+        await state.clear()

@@ -56,8 +56,8 @@ class LoggingManager:
                 with open(self.log_file, "r", encoding="utf-8") as f:
                     return f.read()
             except Exception as e:
-                self.logger.error(f"Не могу прочитать лог-файл: {e}") 
-                return f"ОШИБКА ЧТЕНИЯ ЛОГА: {e}"
+                self.logger.error(f"{e}\nНе могу прочитать лог-файл.") 
+                return f"{e}\nОШИБКА ЧТЕНИЯ ЛОГА."
         return ""
 
     def clear_logs(self):
@@ -65,4 +65,4 @@ class LoggingManager:
             try:
                 open(self.log_file, "w", encoding="utf-8").close()
             except Exception as e:
-                self.logger.error(f"Не удалось очистить лог-файл: {e}")
+                self.logger.error(f"{e}\nНе удалось очистить лог-файл.")
