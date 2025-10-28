@@ -6,3 +6,4 @@ google-auth
 google-auth-oauthlib
 gspread
 Jinja2
+tzdata
