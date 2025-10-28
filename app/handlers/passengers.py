@@ -43,7 +43,7 @@ async def delete_last_entry(
     await send_message(message, "Запись успешно удалена.")
 
 @router.message(F.text.func(lambda text: text and text.isdigit()), driver_filter())
-async def register_passengers(
+async def initiate_entry_with_count(
     message: Message, 
     user_manager: UserManager,
     bus_stops_manager: BusStopsManager,
@@ -119,7 +119,7 @@ async def register_passengers(
         await send_message(message, "❌ Произошла ошибка при загрузке остановок.", reply=True)
 
 @router.callback_query(F.data.startswith("register_passengers_"), driver_filter())
-async def handle_register_passengers(
+async def confirm_and_save_registration(
     callback: CallbackQuery, 
     user_manager: UserManager,
     bus_stops_manager: BusStopsManager, 

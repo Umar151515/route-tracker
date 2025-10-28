@@ -3,7 +3,7 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
 from core.managers import UserManager, ConfigManager
-from utils.text.processing import translate_role
+from utils.text.processing import format_user_record
 from utils.text.processing import validate_phone, normalize_identifier
 from utils.app import send_message, edit_message
 from ....keyboards.admin import user_delete_confirm_keyboard
@@ -80,16 +80,11 @@ async def handle_delete_user_identifier(message: Message, state: FSMContext, use
             bus_number=bus_number
         )
         
-        bus_info = f"\n**Автобус:** {bus_number}" if role == "driver" else ""
-        
         await send_message(
             message,
             f"⚠️ **Подтверждение удаления**\n\n"
-            f"**Вы действительно хотите удалить пользователя?**\n\n"
-            f"**Имя:** {name}\n"
-            f"**Телефон:** `+{phone_number}`\n"
-            f"**User ID:** `{user_id}`\n"
-            f"**Роль:** {translate_role(role)}{bus_info}",
+            f"**Вы действительно хотите удалить пользователя?**\n\n" +
+            format_user_record(name, role, phone_number, user_id, bus_number),
             reply_markup=user_delete_confirm_keyboard
         )
         

@@ -59,11 +59,6 @@ async def handle_edit_identifier(message: Message, state: FSMContext, user_manag
             await send_message(message, "❌ **Неверный формат!** Введите корректный ID или номер телефона. Попробуйте еще раз.")
             return
 
-        if user_id == message.from_user.id:
-            await send_message(message, "🚫 Нельзя редактировать самого себя.")
-            await state.clear()
-            return
-
     except Exception as e:
         ConfigManager.log.logger.error(f"{e}\n❌ Произошла ошибка при поиске пользователя для редактирования: '{identifier}'.")
         await send_message(message, "❌ Произошла ошибка! Не удалось найти пользователя.")
@@ -74,7 +69,8 @@ async def handle_edit_identifier(message: Message, state: FSMContext, user_manag
     await state.set_state(AdminUserEditStates.waiting_for_field)
     await send_message(
         message, 
-        "✅ **Пользователь найден.**\n\nТеперь выберите поле, которое хотите изменить:", 
+        "✅ **Пользователь найден.**" + " Это вы." if user_id == message.from_user.id else ""
+        "\n\nТеперь выберите поле, которое хотите изменить:", 
         reply_markup=get_user_edit_fields_keyboard(role)
     )
 
@@ -184,6 +180,9 @@ async def handle_edit_new_value(message: Message, state: FSMContext, user_manage
             return
 
         await user_manager.set_user(**kwargs_search, **kwargs_update)
+        
+        ConfigManager.log.logger.info(f"Администратор ID - {message.from_user.id} изменил поле {field} на '{new_value}' у пользователя {identifier}")
+        
         await send_message(message, "✅ **Успешно!** Данные пользователя обновлены.")
         await state.clear()
 

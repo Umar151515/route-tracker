@@ -126,7 +126,10 @@ async def handle_add_stop_order(message: Message, state: FSMContext, bus_stops_m
 
     try:
         await bus_stops_manager.create_stop(bus_number=bus_number, stop_name=stop_name, stop_order=stop_order)
+        
         order_text = "в конец" if stop_order is None else f"под номером {stop_order}"
+        ConfigManager.log.logger.info(f"Администратор ID - {message.from_user.id} добавил остановку '{stop_name}' в автобус {bus_number} {order_text}")
+        
         await send_message(message, f"✅ Остановка '{stop_name}' успешно добавлена в автобус '{bus_number}' {order_text}!")
         await state.clear()
     except Exception as e:

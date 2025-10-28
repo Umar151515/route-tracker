@@ -104,7 +104,17 @@ async def handle_remove_stop_order(message: Message, state: FSMContext, bus_stop
         return
 
     try:
+        stops = await bus_stops_manager.get_stops(bus_number=bus_number, get_stop_name=True, get_stop_order=True)
+        stop_name = None
+        for stop in stops:
+            if stop[1] == stop_order:
+                stop_name = stop[0]
+                break
+        
         await bus_stops_manager.delete_stop(bus_number=bus_number, stop_order=stop_order)
+        
+        ConfigManager.log.logger.info(f"Администратор ID - {message.from_user.id} удалил остановку '{stop_name}' (порядок: {stop_order}) из автобуса {bus_number}")
+        
         await send_message(message, f"✅ Остановка под номером {stop_order} успешно удалена из автобуса '{bus_number}'!")
         await state.clear()
     except Exception as e:

@@ -89,6 +89,9 @@ async def handle_add_bus_stops(
                     stop_name=stop_name.strip(), 
                     stop_order=stop_order
                 )
+            
+            ConfigManager.log.logger.info(f"Администратор ID - {message.from_user.id} создал автобус {bus_number} с {len(stops)} остановками: {', '.join(stops)}")
+            
         except Exception as e:
             ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при создании автобуса {bus_number} с остановками.")
             await send_message(message, "❌ Произошла ошибка при создании автобуса.")

@@ -62,9 +62,11 @@ async def handle_remove_bus(
             try:
                 await user_manager.remove_bus_number(phone_number=user["phone_number"])
             except Exception as e:
-                ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при удалении автобуса - {bus_number} у водителя - {user["name"]}.")
+                ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при удалении автобуса - {bus_number} у водителя - {user['name']}.")
 
         driver_names = [user["name"] for user in user_bus_numbers]
+
+        ConfigManager.log.logger.info(f"Администратор ID - {message.from_user.id} удалил автобус {bus_number}. Затронуто водителей: {len(driver_names)} - {', '.join(driver_names) if driver_names else 'нет'}")
 
         if not driver_names:
             message_text = f"✅ Автобус '{bus_number}' успешно удален!"
