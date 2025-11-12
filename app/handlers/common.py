@@ -1,7 +1,7 @@
 from aiogram import F, Router
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, CallbackQuery, ErrorEvent
+from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
 from core.managers import UserManager
@@ -30,7 +30,7 @@ async def cmd_start(message: Message, user_manager: UserManager):
             f"Добро пожаловать {name}!\n\n"
             "Вот что вы можете сделать:\n"
             "Чтобы удалить последнюю запись, используйте команду: /delete_last_entry\n"
-            "Чтобы добавить новую запись, введите число от 0 до 200 и выберите остановку\n"
+            f"Чтобы добавить новую запись, введите число от {ConfigManager.app["min_passenger_count"]} до {ConfigManager.app["max_passenger_count"]} и выберите остановку\n"
             "Чтобы посмотреть свои данные, используйте команду: /my_details\n"
             "Открыть главное меню: /menu\n",
             parse_mode=None

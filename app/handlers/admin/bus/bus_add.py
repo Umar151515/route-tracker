@@ -69,6 +69,7 @@ async def handle_add_bus_stops(
     state: FSMContext, 
     bus_stops_manager: BusStopsManager
 ):
+    
     user_input = message.text.strip()
     data = await state.get_data()
     bus_number = data.get('bus_number')

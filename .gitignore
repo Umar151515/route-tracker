@@ -3,4 +3,4 @@ data/
 .env
 google_sheets_key.json
 venv/
-test/
+*test*

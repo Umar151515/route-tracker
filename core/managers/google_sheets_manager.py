@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import gspread
@@ -127,9 +127,19 @@ class GoogleSheetsManager:
                 if len(row) > 0 and row[0] == today:
                     return True
             return False
-        
-    async def get_last_n_days_data(self, n_days: int | None = None) -> list[list[str]]:
+
+    async def get_filters_data(
+            self,
+            date_str: str | None = None,
+            first_days_count: int | None = None,
+            last_days_count: int | None = None,
+            start_date_str: str | None = None,
+            end_date_str: str | None = None,
+            driver_names: list[str] | None = None,
+            bus_numbers: list[str] | None = None
+        ) -> list[list[str]]:
         all_data = await asyncio.to_thread(self.sheet.get_all_values)
+
         if len(all_data) <= 1:
             return []
 
@@ -138,16 +148,47 @@ class GoogleSheetsManager:
 
         if not records:
             return []
-
+        
         unique_dates = sorted(list(set(row[0] for row in records if len(row) > 1)))
+        if date_str:
+            dt_obj = datetime.strptime(date_str, "%Y-%m-%d") 
+            normalized_date_str = dt_obj.strftime("%Y-%m-%d")
+            records = [row for row in records if len(row) > 1 and row[0] == normalized_date_str]
+        elif first_days_count and first_days_count > 0:
+            dates_to_include = unique_dates[:first_days_count] 
+            records = [row for row in records if len(row) > 1 and row[0] in dates_to_include]
+        elif last_days_count and last_days_count > 0:
+            dates_to_include = unique_dates[-last_days_count:]
+            records = [row for row in records if len(row) > 1 and row[0] in dates_to_include]
+        elif start_date_str and end_date_str:
+            date1 = datetime.strptime(start_date_str, "%Y-%m-%d")
+            date2 = datetime.strptime(end_date_str, "%Y-%m-%d")
+            
+            start_dt = min(date1, date2)
+            end_dt = max(date1, date2)
 
-        if not unique_dates:
+            dates_to_include = set()
+            current_dt = start_dt
+            while current_dt <= end_dt:
+                dates_to_include.add(current_dt.strftime("%Y-%m-%d"))
+                current_dt += timedelta(days=1)
+            
+            records = [
+                row for row in records 
+                if len(row) > 1 and row[0] in dates_to_include
+            ]
+
+        if not records:
             return []
+        
+        if driver_names:
+            records = [row for row in records if len(row) > 3 and row[2] in driver_names]
+            if not records:
+                return []
+        
+        if bus_numbers:
+            records = [row for row in records if len(row) > 4 and row[3] in bus_numbers]
+            if not records:
+                return []
 
-        if not n_days or n_days <= 0 or n_days >= len(unique_dates):
-            return [header] + records
-
-        dates_to_include = unique_dates[-n_days:]
-        filtered_records = [row for row in records if len(row) > 1 and row[0] in dates_to_include]
-
-        return [header] + filtered_records
+        return [header] + records

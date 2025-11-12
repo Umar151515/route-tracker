@@ -8,7 +8,7 @@ from jinja2 import Template
 
 class KeyValueBase(ABC):
     _instance = {}
-    _keys: list[str]
+    keys: dict[str, type]
     config_path: Path
     
     _default_config = """{
@@ -34,7 +34,7 @@ class KeyValueBase(ABC):
     def load(self):
         if not self.config_path.exists():
             with open(self.config_path, 'w', encoding="utf-8") as file:
-                file.write(Template(self._default_config).render(keys=self._keys))
+                file.write(Template(self._default_config).render(keys=self.keys.keys()))
             raise FileNotFoundError(
                 f"Config file was not found and has been created at: {self.config_path}\n"
                 "Please fill in the required configuration before the next run."
@@ -55,6 +55,11 @@ class KeyValueBase(ABC):
     
     def set(self, key: str, value: Any) -> None:
         self._ensure_loaded()
+        if not isinstance(value, self.keys[key]):
+            try:
+                value = self.keys[key](value)
+            except:
+                raise ValueError(f"{self.__class__} '{value}' is not '{self.keys[key]}' in '{key}'")
         self.config[key] = value
         with open(self.config_path, "w", encoding="utf-8") as config_file:
             json.dump(self.config, config_file, ensure_ascii=False, indent=4)

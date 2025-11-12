@@ -18,6 +18,7 @@ admin_main_keyboard = ReplyKeyboardMarkup(
         [KeyboardButton(text="🚌 Настройки автобусов")],
         [KeyboardButton(text="📄 Настройки гугл таблицы")],
         [KeyboardButton(text="🔑 Настройки логирования")],
+        [KeyboardButton(text="📱 Настройки приложения")],
         [KeyboardButton(text="👤 Мои данные")]
     ],
     resize_keyboard=True

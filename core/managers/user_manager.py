@@ -33,8 +33,8 @@ class UserManager:
                     phone_number TEXT NOT NULL UNIQUE,
                     user_id INTEGER UNIQUE,
                     role TEXT NOT NULL,
-                    name VARCHAR(123) NOT NULL UNIQUE,
-                    bus_number VARCHAR(30)
+                    name TEXT NOT NULL UNIQUE,
+                    bus_number TEXT
             );""")
 
             await connect.commit()

@@ -26,7 +26,7 @@ router = Router()
 async def user_settings(message: Message):
     await send_message(
         message, 
-        "⚙️ **Настройки пользователей**\n\nВыберите, что хотите сделать:", 
+        "⚙️ Панель управления пользователей", 
         reply_markup=user_settings_keyboard
     )
 

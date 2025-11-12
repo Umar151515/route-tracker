@@ -4,16 +4,12 @@ from aiogram.fsm.context import FSMContext
 
 from core.managers import GoogleSheetsManager, ConfigManager
 from utils.app import send_message, edit_message
-from ....keyboards.admin import sheets_settings_keyboard, confirm_delete_keyboard
+from ....keyboards.admin import confirm_delete_keyboard
 from ....states.admin import AdminSheetsStates
 from ....filters import admin_filter
 
 
 router = Router()
-
-@router.message(F.text == "📄 Настройки гугл таблицы", admin_filter())
-async def sheets_settings(message: Message):
-    await send_message(message, "📄 Панель управления данными таблиц", reply_markup=sheets_settings_keyboard)
 
 @router.callback_query(F.data == "sheets:delete_data", admin_filter())
 async def cb_delete_data_start(query: CallbackQuery, state: FSMContext):
@@ -38,14 +34,12 @@ async def handle_delete_data(
         days = int(days_str)
         if days <= 0:
             await send_message(message, "❌ Количество дней должно быть положительным числом.")
-            await state.clear()
             return
     else:
         await send_message(message, "❌ Неверный формат числа. Введите целое число.")
-        await state.clear()
         return
     try:
-        current_data = await sheets_manager.get_last_n_days_data()
+        current_data = await sheets_manager.get_filters_data(first_days_count=days)
         if not current_data or len(current_data) <= 1:
             await send_message(message, "❌ В таблице нет данных для удаления.")
             await state.clear()
@@ -55,6 +49,7 @@ async def handle_delete_data(
         ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при проверке данных таблицы")
         await send_message(message, "❌ Произошла ошибка при проверке данных таблицы.")
         await state.clear()
+        return
 
     unique_dates = set()
     for row in current_data[1:]:
@@ -86,7 +81,7 @@ async def handle_delete_data(
         f"📅 Будет удалено данных за первые {days} дней\n"
         f"📊 Всего дней в таблице: {total_days}\n"
         f"📝 Записей будет удалено: {len(current_data) - 1}\n\n"
-        f"❌ Это действие нельзя отменить!",
+        f"❌ Это действие нельзя будет отменить!",
         reply_markup=confirm_delete_keyboard
     )
 

@@ -30,7 +30,7 @@ class BusStopsManager:
             await connect.execute("""
                 CREATE TABLE IF NOT EXISTS buses (
                     bus_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    bus_number VARCHAR(30) NOT NULL UNIQUE
+                    bus_number TEXT NOT NULL UNIQUE
             );""")
 
             await connect.execute("""

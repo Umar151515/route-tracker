@@ -1,11 +1,10 @@
 from aiogram import F, Router
 from aiogram.types import Message, CallbackQuery, FSInputFile
-from aiogram.fsm.context import FSMContext
 
 from core.managers import ConfigManager
 from utils.app import send_message, edit_message
-from ...keyboards.admin import logs_settings_keyboard
-from ...filters import admin_filter
+from ....keyboards.admin import logs_settings_keyboard
+from ....filters import admin_filter
 
 
 router = Router()
@@ -38,12 +37,3 @@ async def cb_show_logs(query: CallbackQuery):
         ConfigManager.log.logger.error(f"{e}\n❌ Ошибка при получении логов.")
         await edit_message(query.message, "❌ Произошла ошибка при получении логов.")
 
-@router.callback_query(F.data == "logs:clear", admin_filter())
-async def cb_clear_logs(query: CallbackQuery):
-    try:
-        ConfigManager.log.clear_logs()
-        ConfigManager.log.logger.info(f"Админ ID: {query.from_user.id} очистил логи")
-        await edit_message(query.message, "✅ Лог-файл успешно очищен!")
-    except Exception as e:
-        ConfigManager.log.logger.error(f"{e}\n Ошибка при очистке логов.")
-        await edit_message(query.message, "❌ Произошла ошибка при очистке логов.")

@@ -8,8 +8,7 @@ from utils.text.processing import (
     validate_bus_number, 
     validate_name,
     normalize_identifier,
-    translate_role,
-    format_user_record
+    translate_role
 )
 from utils.app import send_message, edit_message, delete_message
 from ....keyboards.admin import user_add_role_keyboard
